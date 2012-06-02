@@ -2,6 +2,7 @@ package nz.gen.mi6.celticknot;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -32,6 +33,12 @@ public class DrawingView extends View {
 	@Override
 	protected void onDraw(final Canvas canvas)
 	{
+		if (this.newPath != null) {
+			final Paint paint = new Paint();
+			paint.setARGB(0xFF, 0xFF, 0xFF, 0xFF);
+			paint.setStyle(Paint.Style.STROKE);
+			canvas.drawPath(this.newPath, paint);
+		}
 	}
 
 	@Override
@@ -78,14 +85,29 @@ public class DrawingView extends View {
 		switch (event.getAction()) {
 			case MotionEvent.ACTION_DOWN:
 				this.newPath = new Path();
+				this.newPath.moveTo(event.getX(), event.getY());
 				break;
 			case MotionEvent.ACTION_UP:
 				if (this.newPath != null) {
-					this.model = this.model.addPath(this.newPath);
+					// this.model = this.model.addPath(this.newPath);
 					this.newPath = null;
+					invalidate();
 				}
+				break;
+			case MotionEvent.ACTION_CANCEL:
+				this.newPath = null;
+				invalidate();
+				break;
+			case MotionEvent.ACTION_MOVE:
+				if (this.newPath != null) {
+					for (int i = 0; i < event.getHistorySize(); ++i) {
+						this.newPath.lineTo(event.getHistoricalX(i), event.getHistoricalY(i));
+					}
+					this.newPath.lineTo(event.getX(), event.getY());
+					invalidate();
+				}
+				break;
 		}
 		return true;
 	}
-
 }
