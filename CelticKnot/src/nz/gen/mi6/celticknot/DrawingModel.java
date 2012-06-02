@@ -1,24 +1,28 @@
 package nz.gen.mi6.celticknot;
 
+import java.util.ArrayList;
+
 import android.graphics.Path;
 
 public class DrawingModel {
 
-	private final PersistentList<Path> paths;
+	private final ArrayList<Path> paths;
 
 	public DrawingModel()
 	{
-		this.paths = new PersistentLinkedList<Path>();
+		this.paths = new ArrayList<Path>();
 	}
 
-	public DrawingModel(final PersistentList<Path> paths)
+	public DrawingModel(final ArrayList<Path> paths)
 	{
 		this.paths = paths;
 	}
 
 	public DrawingModel addPath(final Path path)
 	{
-		return new DrawingModel(this.paths.add(path));
+		final ArrayList<Path> paths = new ArrayList<Path>(this.paths);
+		paths.add(path);
+		return new DrawingModel(paths);
 	}
 
 }
