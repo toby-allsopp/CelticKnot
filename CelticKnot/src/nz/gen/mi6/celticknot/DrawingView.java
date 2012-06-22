@@ -176,6 +176,7 @@ public class DrawingView extends View {
 		final Paint paint = new Paint();
 		paint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
 		paint.setStyle(Paint.Style.STROKE);
+		paint.setAntiAlias(true);
 		final float screenX = worldToScreenX(handle.worldX);
 		final float screenY = worldToScreenY(handle.worldY);
 		canvas.drawCircle(screenX, screenY, 20, paint);
@@ -186,12 +187,17 @@ public class DrawingView extends View {
 		final Paint paint = new Paint();
 		paint.setARGB(0xFF, 0xFF, 0xFF, 0xFF);
 		paint.setStyle(Paint.Style.STROKE);
+		paint.setAntiAlias(false);
 		final int height = canvas.getHeight();
 		final int width = canvas.getWidth();
-		final float minScreenX = Math.max(worldToScreenX(0), 0);
-		final float maxScreenX = Math.min(worldToScreenX((this.numColumns - 1) * this.gridWidth), width);
-		final float minScreenY = Math.max(worldToScreenY(0), 0);
-		final float maxScreenY = Math.min(worldToScreenY((this.numRows - 1) * this.gridHeight), height);
+		final float minScreenX = Math.max(worldToScreenX(this.gridWidth / 2), 0);
+		final float maxScreenX = Math.min(
+				worldToScreenX((this.numColumns - 1) * this.gridWidth - this.gridWidth / 2),
+				width);
+		final float minScreenY = Math.max(worldToScreenY(this.gridHeight / 2), 0);
+		final float maxScreenY = Math.min(
+				worldToScreenY((this.numRows - 1) * this.gridHeight - this.gridHeight / 2),
+				height);
 		final int firstHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(this.yScroll / this.gridHeight));
 		final int lastHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(screenToWorldY(height)));
 		final int firstVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(this.xScroll / this.gridWidth));
