@@ -173,20 +173,29 @@ public class DrawingView extends View {
 		final float maxScreenX = Math.min(worldToScreenX((this.numColumns - 1) * this.gridWidth), width);
 		final float minScreenY = Math.max(worldToScreenY(0), 0);
 		final float maxScreenY = Math.min(worldToScreenY((this.numRows - 1) * this.gridHeight), height);
-		{
-			final int firstHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.ceil(this.yScroll / this.gridHeight));
-			final int lastHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(screenToWorldY(height)));
-			for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
-				final float y = worldToScreenY(yi * this.gridHeight);
-				canvas.drawLine(minScreenX, y, maxScreenX, y, paint);
+		final int firstHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(this.yScroll / this.gridHeight));
+		final int lastHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(screenToWorldY(height)));
+		final int firstVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(this.xScroll / this.gridWidth));
+		final int lastVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(screenToWorldX(width)));
+		final float handleLength = Math.min(this.gridWidth, this.gridHeight) / 10 * this.worldToScreen;
+		for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
+			final float y = worldToScreenY(yi * this.gridHeight);
+			canvas.drawLine(minScreenX, y, maxScreenX, y, paint);
+			for (int xi = firstVertGridIndex; xi < lastVertGridIndex; ++xi) {
+				final float x1 = worldToScreenX(xi * this.gridWidth - this.gridWidth / 3);
+				final float x2 = worldToScreenX(xi * this.gridWidth + this.gridWidth / 3);
+				canvas.drawLine(x1, y - handleLength, x1, y + handleLength, paint);
+				canvas.drawLine(x2, y - handleLength, x2, y + handleLength, paint);
 			}
 		}
-		{
-			final int firstVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.ceil(this.xScroll / this.gridWidth));
-			final int lastVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(screenToWorldX(width)));
-			for (int xi = firstVertGridIndex; xi < lastVertGridIndex; ++xi) {
-				final float x = worldToScreenX(xi * this.gridWidth);
-				canvas.drawLine(x, minScreenY, x, maxScreenY, paint);
+		for (int xi = firstVertGridIndex; xi < lastVertGridIndex; ++xi) {
+			final float x = worldToScreenX(xi * this.gridWidth);
+			canvas.drawLine(x, minScreenY, x, maxScreenY, paint);
+			for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
+				final float y1 = worldToScreenY(yi * this.gridHeight - this.gridHeight / 3);
+				final float y2 = worldToScreenY(yi * this.gridHeight + this.gridHeight / 3);
+				canvas.drawLine(x - handleLength, y1, x + handleLength, y1, paint);
+				canvas.drawLine(x - handleLength, y2, x + handleLength, y2, paint);
 			}
 		}
 	}
