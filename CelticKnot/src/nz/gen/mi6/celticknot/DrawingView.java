@@ -3,6 +3,8 @@ package nz.gen.mi6.celticknot;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Paint.Align;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -134,6 +136,7 @@ public class DrawingView extends View {
 	@Override
 	protected void onDraw(final Canvas canvas)
 	{
+		final long startNanos = System.nanoTime();
 		if (this.drawGrid) {
 			drawGrid(canvas);
 		}
@@ -144,6 +147,13 @@ public class DrawingView extends View {
 				drawProposedSegment(canvas);
 			}
 		}
+		final long frameNanos = System.nanoTime() - startNanos;
+		final Paint paint = new Paint();
+		paint.setARGB(127, 255, 255, 255);
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setTypeface(Typeface.DEFAULT);
+		paint.setTextAlign(Align.LEFT);
+		canvas.drawText(String.format("%fms/frame", frameNanos / 1000. / 1000.), 10, 10, paint);
 	}
 
 	private void drawProposedSegment(final Canvas canvas)
