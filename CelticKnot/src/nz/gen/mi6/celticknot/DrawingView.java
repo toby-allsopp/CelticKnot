@@ -294,7 +294,7 @@ public class DrawingView extends View {
 			case MotionEvent.ACTION_DOWN: {
 				final float worldX = screenToWorldX(event.getX());
 				final float worldY = screenToWorldY(event.getY());
-				this.mStartHandle = getNearestHandle(worldX, worldY);
+				this.mStartHandle = getNearestHandle(worldX, worldY, null);
 				invalidate();
 				break;
 			}
@@ -317,7 +317,7 @@ public class DrawingView extends View {
 				if (this.mStartHandle != null) {
 					final float worldX = screenToWorldX(event.getX());
 					final float worldY = screenToWorldY(event.getY());
-					this.mEndHandle = getNearestHandle(worldX, worldY);
+					this.mEndHandle = getNearestHandle(worldX, worldY, this.mStartHandle);
 					invalidate();
 				}
 				break;
@@ -335,16 +335,24 @@ public class DrawingView extends View {
 		return i < min ? min : i > max ? max : i;
 	}
 
-	private Handle getNearestHandle(final float worldX, final float worldY)
+	private Handle getNearestHandle(final float worldX, final float worldY, final Handle adjacentHandle)
 	{
+		final int minHorizGridIndex = adjacentHandle == null ? 1 : Math.max(1, adjacentHandle.horizGridIndex - 1);
+		final int maxHorizGridIndex = adjacentHandle == null ? this.numColumns - 1 : Math.min(
+				this.numColumns - 1,
+				adjacentHandle.horizGridIndex + 1);
+		final int minVertGridIndex = adjacentHandle == null ? 1 : Math.max(1, adjacentHandle.vertGridIndex - 1);
+		final int maxVertGridIndex = adjacentHandle == null ? this.numRows - 1 : Math.min(
+				this.numRows - 1,
+				adjacentHandle.vertGridIndex + 1);
 		// Find the grid line this is closest to.
 		final float horizGridY = clamp(
-				this.gridHeight,
-				this.gridHeight * (this.numRows - 1),
+				this.gridHeight * minVertGridIndex,
+				this.gridHeight * maxVertGridIndex,
 				Math.round(worldY / this.gridHeight) * this.gridHeight);
 		final float vertGridX = clamp(
-				this.gridWidth,
-				this.gridWidth * (this.numColumns - 1),
+				this.gridWidth * minHorizGridIndex,
+				this.gridWidth * maxHorizGridIndex,
 				Math.round(worldX / this.gridWidth) * this.gridWidth);
 
 		// Handles are at the same interval as the grid lines but offset by grid
