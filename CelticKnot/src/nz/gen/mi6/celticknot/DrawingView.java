@@ -158,8 +158,17 @@ public class DrawingView extends View {
 
 	private void drawProposedSegment(final Canvas canvas)
 	{
-		// TODO Auto-generated method stub
-
+		final Paint paint = new Paint();
+		paint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setAntiAlias(true);
+		paint.setStrokeWidth(5 * this.worldToScreen);
+		canvas.drawLine(
+				worldToScreenX(this.mStartHandle.worldX),
+				worldToScreenY(this.mStartHandle.worldY),
+				worldToScreenX(this.mEndHandle.worldX),
+				worldToScreenY(this.mEndHandle.worldY),
+				paint);
 	}
 
 	private void drawSelectedHandle(final Canvas canvas, final Handle handle)
