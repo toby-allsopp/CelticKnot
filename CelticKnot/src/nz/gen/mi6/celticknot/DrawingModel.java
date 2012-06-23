@@ -1,28 +1,37 @@
 package nz.gen.mi6.celticknot;
 
-import java.util.ArrayList;
-
-import android.graphics.Path;
-
 public class DrawingModel {
 
-	private final ArrayList<Path> paths;
+	private final Cell[][] cells;
 
-	public DrawingModel()
+	public DrawingModel(final int columns, final int rows)
 	{
-		this.paths = new ArrayList<Path>();
+		if (columns < 0 || rows < 0) {
+			throw new IllegalArgumentException("columns and rows mst be >= 0");
+		}
+		this.cells = new Cell[columns + 2][rows + 2];
 	}
 
-	public DrawingModel(final ArrayList<Path> paths)
+	public int getNumColumns()
 	{
-		this.paths = paths;
+		return this.cells[0].length - 2;
 	}
 
-	public DrawingModel addPath(final Path path)
+	public int getNumRows()
 	{
-		final ArrayList<Path> paths = new ArrayList<Path>(this.paths);
-		paths.add(path);
-		return new DrawingModel(paths);
+		return this.cells.length - 2;
 	}
 
+	/**
+	 * 0 is the first half-cell, 1 is the first full cell, numColumns is the
+	 * last full cell, numColumns + 1 is the last half-cell
+	 * 
+	 * @param column
+	 * @param row
+	 * @return
+	 */
+	public Cell getCell(final int column, final int row)
+	{
+		return this.cells[column][row];
+	}
 }

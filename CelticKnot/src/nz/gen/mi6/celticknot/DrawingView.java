@@ -97,6 +97,13 @@ public class DrawingView extends View {
 
 	private final boolean drawGrid = true;
 
+	private final int numRows = 10;
+
+	private final int numColumns = 10;
+
+	// private final DrawingModel model = new DrawingModel(this.numColumns,
+	// this.numRows);
+
 	private float xScroll;
 	private float yScroll;
 
@@ -112,10 +119,6 @@ public class DrawingView extends View {
 
 	/** World width of the grid */
 	private final float gridHeight = 20.f;
-
-	private final int numRows = 10;
-
-	private final int numColumns = 10;
 
 	private Handle mStartHandle;
 
