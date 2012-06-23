@@ -195,16 +195,16 @@ public class DrawingView extends View {
 		final int width = canvas.getWidth();
 		final float minScreenX = Math.max(worldToScreenX(this.gridWidth / 2), 0);
 		final float maxScreenX = Math.min(
-				worldToScreenX((this.numColumns - 1) * this.gridWidth - this.gridWidth / 2),
+				worldToScreenX((this.numColumns + 1) * this.gridWidth + this.gridWidth / 2),
 				width);
 		final float minScreenY = Math.max(worldToScreenY(this.gridHeight / 2), 0);
 		final float maxScreenY = Math.min(
-				worldToScreenY((this.numRows - 1) * this.gridHeight - this.gridHeight / 2),
+				worldToScreenY((this.numRows + 1) * this.gridHeight + this.gridHeight / 2),
 				height);
-		final int firstHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(this.yScroll / this.gridHeight));
-		final int lastHorizGridIndex = clamp(1, this.numRows - 1, (int) Math.floor(screenToWorldY(height)));
-		final int firstVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(this.xScroll / this.gridWidth));
-		final int lastVertGridIndex = clamp(1, this.numColumns - 1, (int) Math.floor(screenToWorldX(width)));
+		final int firstHorizGridIndex = clamp(1, this.numRows + 2, (int) Math.floor(this.yScroll / this.gridHeight));
+		final int lastHorizGridIndex = clamp(1, this.numRows + 2, (int) Math.floor(screenToWorldY(height)));
+		final int firstVertGridIndex = clamp(1, this.numColumns + 2, (int) Math.floor(this.xScroll / this.gridWidth));
+		final int lastVertGridIndex = clamp(1, this.numColumns + 2, (int) Math.floor(screenToWorldX(width)));
 		final float handleLength = Math.min(this.gridWidth, this.gridHeight) / 10 * this.worldToScreen;
 		for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
 			final float y = worldToScreenY(yi * this.gridHeight);
@@ -340,78 +340,82 @@ public class DrawingView extends View {
 
 	private Handle getNearestHandle(final float worldX, final float worldY, final Handle adjacentHandle)
 	{
-		final int minHorizGridIndex = adjacentHandle == null ? 1 : Math.max(1, adjacentHandle.horizGridIndex - 1);
-		final int maxHorizGridIndex = adjacentHandle == null ? this.numColumns - 1 : Math.min(
-				this.numColumns - 1,
-				adjacentHandle.horizGridIndex + 1);
-		final int minVertGridIndex = adjacentHandle == null ? 1 : Math.max(1, adjacentHandle.vertGridIndex - 1);
-		final int maxVertGridIndex = adjacentHandle == null ? this.numRows - 1 : Math.min(
-				this.numRows - 1,
-				adjacentHandle.vertGridIndex + 1);
-		// Find the grid line this is closest to.
-		final float horizGridY = clamp(
-				this.gridHeight * minVertGridIndex,
-				this.gridHeight * maxVertGridIndex,
-				Math.round(worldY / this.gridHeight) * this.gridHeight);
-		final float vertGridX = clamp(
-				this.gridWidth * minHorizGridIndex,
-				this.gridWidth * maxHorizGridIndex,
-				Math.round(worldX / this.gridWidth) * this.gridWidth);
+		// Find the cell in which the touch occurred.
+		final int column = clamp(0, this.numColumns + 1, (int) Math.floor(worldX / this.gridWidth));
+		final int row = clamp(0, this.numRows + 1, (int) Math.floor(worldY / this.gridHeight));
 
-		// Handles are at the same interval as the grid lines but offset by grid
-		// size * 1/3 and * 2/3.
-		final float horizHandleOffset1 = this.gridWidth / 3;
-		final float horizHandleOffset2 = this.gridWidth * 2 / 3;
-		final float vertHandleOffset1 = this.gridHeight / 3;
-		final float vertHandleOffset2 = this.gridHeight * 2 / 3;
-		final float horizHandleMinX = horizHandleOffset2;
-		final float horizHandleMaxX = horizHandleOffset1 + this.gridWidth * (this.numColumns - 1);
-		final float vertHandleMinY = vertHandleOffset2;
-		final float vertHandleMaxY = vertHandleOffset1 + this.gridHeight * (this.numRows - 1);
-		final float horizHandleX1 = clamp(
-				horizHandleMinX,
-				horizHandleMaxX,
-				Math.round((worldX - horizHandleOffset1) / this.gridWidth) * this.gridWidth + horizHandleOffset1);
-		final float horizHandleX2 = clamp(
-				horizHandleMinX,
-				horizHandleMaxX,
-				Math.round((worldX - horizHandleOffset2) / this.gridWidth) * this.gridWidth + horizHandleOffset2);
-		final float vertHandleY1 = clamp(
-				vertHandleMinY,
-				vertHandleMaxY,
-				Math.round((worldY - vertHandleOffset1) / this.gridHeight) * this.gridHeight + vertHandleOffset1);
-		final float vertHandleY2 = clamp(
-				vertHandleMinY,
-				vertHandleMaxY,
-				Math.round((worldY - vertHandleOffset2) / this.gridHeight) * this.gridHeight + vertHandleOffset2);
-		final float distToHorizHandle1 = Math.abs(worldX - horizHandleX1);
-		final float distToHorizHandle2 = Math.abs(worldX - horizHandleX2);
-		final float horizHandleX = distToHorizHandle2 < distToHorizHandle1 ? horizHandleX2 : horizHandleX1;
-		final float distToVertHandle1 = Math.abs(worldY - vertHandleY1);
-		final float distToVertHandle2 = Math.abs(worldY - vertHandleY2);
-		final float vertHandleY = distToVertHandle2 < distToVertHandle1 ? vertHandleY2 : vertHandleY1;
-		final float horizDX = horizHandleX - worldX;
-		final float horizDY = horizGridY - worldY;
-		final float sqrdistToHorizHandle = horizDX * horizDX + horizDY * horizDY;
-		final float vertDY = vertHandleY - worldY;
-		final float vertDX = vertGridX - worldX;
-		final float sqrdistToVertHandle = vertDX * vertDX + vertDY * vertDY;
-		final float handleX;
-		final float handleY;
-		final float handleSqrdist;
-		if (sqrdistToHorizHandle < sqrdistToVertHandle) {
-			handleX = horizHandleX;
-			handleY = horizGridY;
-			handleSqrdist = sqrdistToHorizHandle;
+		// Calculate the cell-relative coordinates of the touch, from 0 to 1.
+		final float cellPropX = (worldX - column * this.gridWidth) / this.gridWidth;
+		final float cellPropY = (worldY - row * this.gridHeight) / this.gridHeight;
+
+		// Figure out the nearest handle in the cell
+		final int handleIndex;
+		final float handlePropX;
+		final float handlePropY;
+		if (cellPropX < 0.5) {
+			// Handle index 0, 5, 6, 7
+			if (cellPropY < 0.5) {
+				// Handle index 0, 7
+				if (cellPropX < cellPropY) {
+					handleIndex = 7;
+					handlePropX = 0.f;
+					handlePropY = 1 / 3.f;
+				} else {
+					handleIndex = 0;
+					handlePropX = 1 / 3.f;
+					handlePropY = 0.f;
+				}
+			} else {
+				// Handle index 5, 6
+				if (cellPropX > 1 - cellPropY) {
+					handleIndex = 5;
+					handlePropX = 1 / 3.f;
+					handlePropY = 1.f;
+				} else {
+					handleIndex = 6;
+					handlePropX = 0.f;
+					handlePropY = 2 / 3.f;
+				}
+			}
 		} else {
-			handleY = vertHandleY;
-			handleX = vertGridX;
-			handleSqrdist = sqrdistToVertHandle;
+			// Handle index 1, 2, 3, 4
+			if (cellPropY < 0.5) {
+				// Handle index 1, 2
+				if (1 - cellPropX > cellPropY) {
+					handleIndex = 1;
+					handlePropX = 2 / 3.f;
+					handlePropY = 0.f;
+				} else {
+					handleIndex = 2;
+					handlePropX = 1.f;
+					handlePropY = 1 / 3.f;
+				}
+			} else {
+				// Handle index 3, 4
+				if (cellPropX < cellPropY) {
+					handleIndex = 4;
+					handlePropX = 2 / 3.f;
+					handlePropY = 1.f;
+				} else {
+					handleIndex = 3;
+					handlePropX = 1.f;
+					handlePropY = 2 / 3.f;
+				}
+			}
 		}
-		if (handleSqrdist * this.worldToScreen * this.worldToScreen < 20 * 20) {
-			final Handle handle = new Handle();
-			handle.worldX = handleX;
-			handle.worldY = handleY;
+
+		final Handle handle = new Handle();
+		handle.worldX = column * this.gridWidth + handlePropX * this.gridWidth;
+		handle.worldY = row * this.gridHeight + handlePropY * this.gridHeight;
+		handle.column = column;
+		handle.row = row;
+		handle.handleIndex = handleIndex;
+
+		final float dx = worldX - handle.worldX;
+		final float dy = worldY - handle.worldY;
+		final float sqrdist = (dx * dx) + (dy * dy);
+		if (sqrdist < this.gridWidth * this.gridHeight / 9
+				&& (adjacentHandle == null || adjacentHandle.adjacentTo(handle))) {
 			return handle;
 		} else {
 			return null;
