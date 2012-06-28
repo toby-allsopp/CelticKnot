@@ -142,6 +142,7 @@ public class DrawingView extends View {
 		if (this.drawGrid) {
 			drawGrid(canvas);
 		}
+		drawKnot(canvas);
 		if (this.mStartHandle != null) {
 			drawSelectedHandle(canvas, this.mStartHandle);
 			if (this.mEndHandle != null) {
@@ -156,6 +157,24 @@ public class DrawingView extends View {
 		paint.setTypeface(Typeface.DEFAULT);
 		paint.setTextAlign(Align.LEFT);
 		canvas.drawText(String.format("%fms/frame", frameNanos / 1000. / 1000.), 10, 10, paint);
+	}
+
+	private void drawKnot(final Canvas canvas)
+	{
+		final Paint paint = new Paint();
+		paint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
+		paint.setStyle(Paint.Style.STROKE);
+		for (int column = 0; column < this.model.getNumColumns() + 2; ++column) {
+			for (int row = 0; row < this.model.getNumRows() + 2; ++row) {
+				final Cell cell = this.model.getCell(column, row);
+				for (int from = 0; from < 4; ++from) {
+					final int to = cell.getConnectionFrom(from);
+					if (to != -1) {
+						// TODO draw the knot segment
+					}
+				}
+			}
+		}
 	}
 
 	private void drawProposedSegment(final Canvas canvas)
@@ -311,7 +330,26 @@ public class DrawingView extends View {
 			case MotionEvent.ACTION_UP:
 				if (this.mStartHandle != null) {
 					if (this.mEndHandle != null) {
-
+						final int column = this.mEndHandle.column;
+						final int row = this.mEndHandle.row;
+						final int from;
+						if (this.mStartHandle.column != column) {
+							// 2 -> 7
+							// 3 -> 6
+							// 7 -> 2
+							// 6 -> 3
+							from = 9 - this.mStartHandle.handleIndex;
+						} else if (this.mStartHandle.row != row) {
+							// 0 -> 5
+							// 1 -> 4
+							// 5 -> 0
+							// 4 -> 1
+							from = 5 - this.mStartHandle.handleIndex;
+						} else {
+							from = this.mStartHandle.handleIndex;
+						}
+						final int to = this.mEndHandle.handleIndex;
+						this.model.getCell(column, row).connect(from, to);
 					}
 					this.mStartHandle = null;
 					this.mEndHandle = null;
