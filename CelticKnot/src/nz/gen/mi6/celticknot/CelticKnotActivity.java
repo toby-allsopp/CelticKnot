@@ -10,5 +10,8 @@ public class CelticKnotActivity extends Activity {
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
+		final DrawingView view = (DrawingView) findViewById(R.id.drawingView);
+		view.setModel(new DrawingModel(10, 10));
 	}
 }

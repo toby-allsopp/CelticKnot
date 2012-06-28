@@ -97,19 +97,12 @@ public class DrawingView extends View {
 
 	private final boolean drawGrid = true;
 
-	private final int numRows = 10;
-
-	private final int numColumns = 10;
-
-	// private final DrawingModel model = new DrawingModel(this.numColumns,
-	// this.numRows);
-
 	private float xScroll;
 	private float yScroll;
 
 	private float worldToScreen = 10;
 
-	// private DrawingModel model;
+	private DrawingModel model;
 
 	private final GestureDetector gestureDetector;
 	private final ScaleGestureDetector scaleGestureDetector;
@@ -134,6 +127,12 @@ public class DrawingView extends View {
 		super(context, attrs, defStyle);
 		this.gestureDetector = new GestureDetector(context, new GestureListener());
 		this.scaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureListener());
+	}
+
+	public void setModel(final DrawingModel model)
+	{
+		this.model = model;
+		invalidate();
 	}
 
 	@Override
@@ -194,17 +193,25 @@ public class DrawingView extends View {
 		final int height = canvas.getHeight();
 		final int width = canvas.getWidth();
 		final float minScreenX = Math.max(worldToScreenX(this.gridWidth / 2), 0);
-		final float maxScreenX = Math.min(
-				worldToScreenX((this.numColumns + 1) * this.gridWidth + this.gridWidth / 2),
-				width);
+		final float maxScreenX = Math.min(worldToScreenX((this.model.getNumColumns() + 1)
+				* this.gridWidth
+				+ this.gridWidth
+				/ 2), width);
 		final float minScreenY = Math.max(worldToScreenY(this.gridHeight / 2), 0);
-		final float maxScreenY = Math.min(
-				worldToScreenY((this.numRows + 1) * this.gridHeight + this.gridHeight / 2),
-				height);
-		final int firstHorizGridIndex = clamp(1, this.numRows + 2, (int) Math.floor(this.yScroll / this.gridHeight));
-		final int lastHorizGridIndex = clamp(1, this.numRows + 2, (int) Math.floor(screenToWorldY(height)));
-		final int firstVertGridIndex = clamp(1, this.numColumns + 2, (int) Math.floor(this.xScroll / this.gridWidth));
-		final int lastVertGridIndex = clamp(1, this.numColumns + 2, (int) Math.floor(screenToWorldX(width)));
+		final float maxScreenY = Math.min(worldToScreenY((this.model.getNumRows() + 1)
+				* this.gridHeight
+				+ this.gridHeight
+				/ 2), height);
+		final int firstHorizGridIndex = clamp(
+				1,
+				this.model.getNumRows() + 2,
+				(int) Math.floor(this.yScroll / this.gridHeight));
+		final int lastHorizGridIndex = clamp(1, this.model.getNumRows() + 2, (int) Math.floor(screenToWorldY(height)));
+		final int firstVertGridIndex = clamp(
+				1,
+				this.model.getNumColumns() + 2,
+				(int) Math.floor(this.xScroll / this.gridWidth));
+		final int lastVertGridIndex = clamp(1, this.model.getNumColumns() + 2, (int) Math.floor(screenToWorldX(width)));
 		final float handleLength = Math.min(this.gridWidth, this.gridHeight) / 10 * this.worldToScreen;
 		for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
 			final float y = worldToScreenY(yi * this.gridHeight);
@@ -341,8 +348,63 @@ public class DrawingView extends View {
 	private Handle getNearestHandle(final float worldX, final float worldY, final Handle adjacentHandle)
 	{
 		// Find the cell in which the touch occurred.
-		final int column = clamp(0, this.numColumns + 1, (int) Math.floor(worldX / this.gridWidth));
-		final int row = clamp(0, this.numRows + 1, (int) Math.floor(worldY / this.gridHeight));
+		final int minColumn;
+		final int maxColumn;
+		final int minRow;
+		final int maxRow;
+		if (adjacentHandle == null) {
+			minColumn = 0;
+			maxColumn = this.model.getNumColumns() + 1;
+			minRow = 0;
+			maxRow = this.model.getNumRows() + 1;
+		} else {
+			switch (adjacentHandle.handleIndex) {
+				case 0:
+				case 1:
+				case 4:
+				case 5:
+					minColumn = adjacentHandle.column;
+					maxColumn = adjacentHandle.column;
+					break;
+				case 2:
+				case 3:
+					minColumn = adjacentHandle.column;
+					maxColumn = adjacentHandle.column + 1;
+					break;
+				case 6:
+				case 7:
+					minColumn = adjacentHandle.column - 1;
+					maxColumn = adjacentHandle.column;
+					break;
+				default:
+					minColumn = adjacentHandle.column;
+					maxColumn = adjacentHandle.column;
+			}
+			switch (adjacentHandle.handleIndex) {
+				case 0:
+				case 1:
+					minRow = adjacentHandle.row - 1;
+					maxRow = adjacentHandle.row;
+					break;
+				case 2:
+				case 3:
+				case 6:
+				case 7:
+					minRow = adjacentHandle.row;
+					maxRow = adjacentHandle.row;
+					break;
+				case 4:
+				case 5:
+					minRow = adjacentHandle.row;
+					maxRow = adjacentHandle.row + 1;
+					break;
+				default:
+					minRow = adjacentHandle.row;
+					maxRow = adjacentHandle.row;
+			}
+		}
+		final int column = clamp(minColumn, maxColumn, (int) Math.floor(worldX / this.gridWidth));
+		final int row = clamp(minRow, maxRow, (int) Math.floor(worldY / this.gridHeight));
 
 		// Calculate the cell-relative coordinates of the touch, from 0 to 1.
 		final float cellPropX = (worldX - column * this.gridWidth) / this.gridWidth;
@@ -350,63 +412,47 @@ public class DrawingView extends View {
 
 		// Figure out the nearest handle in the cell
 		final int handleIndex;
-		final float handlePropX;
-		final float handlePropY;
-		if (cellPropX < 0.5) {
+		final float[] handlePropX = { 1 / 3.f, 2 / 3.f, 3 / 3.f, 3 / 3.f, 2 / 3.f, 1 / 3.f, 0 / 3.f, 0 / 3.f };
+		final float[] handlePropY = { 0 / 3.f, 0 / 3.f, 1 / 3.f, 2 / 3.f, 3 / 3.f, 3 / 3.f, 2 / 3.f, 1 / 3.f };
+		if (cellPropX < 0.5 && column != 0 || column == this.model.getNumColumns() + 1) {
 			// Handle index 0, 5, 6, 7
-			if (cellPropY < 0.5) {
+			if (cellPropY < 0.5 && row != 0 || row == this.model.getNumRows() + 1) {
 				// Handle index 0, 7
 				if (cellPropX < cellPropY) {
 					handleIndex = 7;
-					handlePropX = 0.f;
-					handlePropY = 1 / 3.f;
 				} else {
 					handleIndex = 0;
-					handlePropX = 1 / 3.f;
-					handlePropY = 0.f;
 				}
 			} else {
 				// Handle index 5, 6
 				if (cellPropX > 1 - cellPropY) {
 					handleIndex = 5;
-					handlePropX = 1 / 3.f;
-					handlePropY = 1.f;
 				} else {
 					handleIndex = 6;
-					handlePropX = 0.f;
-					handlePropY = 2 / 3.f;
 				}
 			}
 		} else {
 			// Handle index 1, 2, 3, 4
-			if (cellPropY < 0.5) {
+			if (cellPropY < 0.5 && row != 0 || row == this.model.getNumRows() + 1) {
 				// Handle index 1, 2
 				if (1 - cellPropX > cellPropY) {
 					handleIndex = 1;
-					handlePropX = 2 / 3.f;
-					handlePropY = 0.f;
 				} else {
 					handleIndex = 2;
-					handlePropX = 1.f;
-					handlePropY = 1 / 3.f;
 				}
 			} else {
 				// Handle index 3, 4
 				if (cellPropX < cellPropY) {
 					handleIndex = 4;
-					handlePropX = 2 / 3.f;
-					handlePropY = 1.f;
 				} else {
 					handleIndex = 3;
-					handlePropX = 1.f;
-					handlePropY = 2 / 3.f;
 				}
 			}
 		}
 
 		final Handle handle = new Handle();
-		handle.worldX = column * this.gridWidth + handlePropX * this.gridWidth;
-		handle.worldY = row * this.gridHeight + handlePropY * this.gridHeight;
+		handle.worldX = column * this.gridWidth + handlePropX[handleIndex] * this.gridWidth;
+		handle.worldY = row * this.gridHeight + handlePropY[handleIndex] * this.gridHeight;
 		handle.column = column;
 		handle.row = row;
 		handle.handleIndex = handleIndex;
