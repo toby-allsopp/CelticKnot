@@ -9,6 +9,11 @@ public class Cell {
 	{
 		this.connections[from] = to;
 		this.connections[to] = from;
+		for (int i = 0; i < 8; ++i) {
+			if (i != from && this.connections[i] == to || i != to && this.connections[i] == from) {
+				this.connections[i] = -1;
+			}
+		}
 		Assert.assertTrue(invariant());
 	}
 
