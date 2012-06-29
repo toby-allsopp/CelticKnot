@@ -10,6 +10,11 @@ public class DrawingModel {
 			throw new IllegalArgumentException("columns and rows mst be >= 0");
 		}
 		this.cells = new Cell[columns + 2][rows + 2];
+		for (int column = 0; column < columns + 2; ++column) {
+			for (int row = 0; row < rows + 2; ++row) {
+				this.cells[column][row] = new Cell();
+			}
+		}
 	}
 
 	public int getNumColumns()
