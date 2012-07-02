@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Path;
+import android.graphics.Region;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.util.FloatMath;
@@ -33,6 +34,7 @@ public class DrawingView extends View {
 			DrawingView.this.worldToScreen *= detector.getScaleFactor();
 			DrawingView.this.xScroll -= screenToWorldX(detector.getFocusX()) - worldFocusX;
 			DrawingView.this.yScroll -= screenToWorldY(detector.getFocusY()) - worldFocusY;
+			setUpPaints();
 			invalidate();
 			return true;
 		}
@@ -133,6 +135,8 @@ public class DrawingView extends View {
 
 	private final Paint gridPaint;
 
+	private final Paint knotBackgroundPaint;
+
 	public DrawingView(final Context context, final AttributeSet attrs)
 	{
 		this(context, attrs, 0);
@@ -144,29 +148,41 @@ public class DrawingView extends View {
 		this.gestureDetector = new GestureDetector(context, new GestureListener());
 		this.scaleGestureDetector = new ScaleGestureDetector(context, new ScaleGestureListener());
 
+		this.knotBackgroundPaint = new Paint();
 		this.frameratePaint = new Paint();
-		this.frameratePaint.setARGB(127, 255, 255, 255);
+		this.knotPaint = new Paint();
+		this.proposedSegmentPaint = new Paint();
+		this.selectedHandlePaint = new Paint();
+		this.gridPaint = new Paint();
+
+		setUpPaints();
+	}
+
+	private void setUpPaints()
+	{
+		this.frameratePaint.setARGB(127, 0, 0, 0);
 		this.frameratePaint.setStyle(Paint.Style.STROKE);
 		this.frameratePaint.setTypeface(Typeface.DEFAULT);
 		this.frameratePaint.setTextAlign(Align.LEFT);
 
-		this.knotPaint = new Paint();
-		this.knotPaint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
+		this.knotPaint.setARGB(0xFF, 0xFF, 0x00, 0x00);
 		this.knotPaint.setStyle(Paint.Style.STROKE);
+		this.knotPaint.setStrokeWidth(4 * this.worldToScreen);
 
-		this.proposedSegmentPaint = new Paint();
+		this.knotBackgroundPaint.setARGB(0xFF, 0x00, 0x00, 0x00);
+		this.knotBackgroundPaint.setStyle(Paint.Style.STROKE);
+		this.knotBackgroundPaint.setStrokeWidth(5 * this.worldToScreen);
+
 		this.proposedSegmentPaint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
 		this.proposedSegmentPaint.setStyle(Paint.Style.STROKE);
 		this.proposedSegmentPaint.setAntiAlias(true);
 		this.proposedSegmentPaint.setStrokeWidth(5 * this.worldToScreen);
 
-		this.selectedHandlePaint = new Paint();
 		this.selectedHandlePaint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
 		this.selectedHandlePaint.setStyle(Paint.Style.STROKE);
 		this.selectedHandlePaint.setAntiAlias(true);
 
-		this.gridPaint = new Paint();
-		this.gridPaint.setARGB(0xFF, 0xFF, 0xFF, 0xFF);
+		this.gridPaint.setARGB(0xFF, 0, 0, 0);
 		this.gridPaint.setStyle(Paint.Style.STROKE);
 		this.gridPaint.setAntiAlias(false);
 
@@ -182,10 +198,16 @@ public class DrawingView extends View {
 	protected void onDraw(final Canvas canvas)
 	{
 		final long startNanos = System.nanoTime();
+		int saveCount;
+		canvas.drawColor(0xFFFFFFFF);
 		if (this.drawGrid) {
+			saveCount = canvas.save();
 			drawGrid(canvas);
+			canvas.restoreToCount(saveCount);
 		}
+		saveCount = canvas.save();
 		drawKnot(canvas);
+		canvas.restoreToCount(saveCount);
 		if (this.mStartHandle != null) {
 			drawSelectedHandle(canvas, this.mStartHandle);
 			if (this.mEndHandle != null) {
@@ -205,9 +227,11 @@ public class DrawingView extends View {
 				final Cell cell = this.model.getCell(column, row);
 				final float cellOriginWorldX = column * this.gridWidth;
 				final float cellOriginWorldY = row * this.gridHeight;
-				for (int from = 0; from < 8; ++from) {
+				final int[] froms = { 0, 2, 4, 6, 1, 3, 5, 7 };
+				for (int i = 0; i < 8; ++i) {
+					final int from = froms[i];
 					final int to = cell.getConnectionFrom(from);
-					if (to != -1 && to > from) {
+					if (to != -1) {
 						final float startWorldX = cellOriginWorldX + handlePropX[from] * this.gridWidth;
 						final float stopWorldX = cellOriginWorldX + handlePropX[to] * this.gridWidth;
 						final float startWorldY = cellOriginWorldY + handlePropY[from] * this.gridHeight;
@@ -232,6 +256,7 @@ public class DrawingView extends View {
 							worldX2 = stopWorldX;
 							worldY2 = cellOriginWorldY + (to / 4 == 0 ? 1 / 3.f : 2 / 3.f) * this.gridHeight;
 						}
+						path.reset();
 						path.moveTo(worldToScreenX(startWorldX), worldToScreenY(startWorldY));
 						path.cubicTo(
 								worldToScreenX(worldX1),
@@ -240,6 +265,38 @@ public class DrawingView extends View {
 								worldToScreenY(worldY2),
 								worldToScreenX(stopWorldX),
 								worldToScreenY(stopWorldY));
+						if (startHorizontal == stopHorizontal || true) {
+							final float clipPropX1, clipPropX2, clipPropY1, clipPropY2;
+							if (startHorizontal) {
+								clipPropY1 = 0.f;
+								clipPropY2 = 1.f;
+								if (from < 4) {
+									clipPropX1 = 0.5f;
+									clipPropX2 = 1.f;
+								} else {
+									clipPropX1 = 0.f;
+									clipPropX2 = .5f;
+								}
+							} else {
+								clipPropX1 = 0.f;
+								clipPropX2 = 1.f;
+								if (from < 4) {
+									clipPropY1 = 0.f;
+									clipPropY2 = .5f;
+								} else {
+									clipPropY1 = 0.5f;
+									clipPropY2 = 1.f;
+								}
+							}
+							canvas.clipRect(
+									worldToScreenX(cellOriginWorldX + clipPropX1 * this.gridWidth),
+									worldToScreenY(cellOriginWorldY + clipPropY1 * this.gridHeight),
+									worldToScreenX(cellOriginWorldX + clipPropX2 * this.gridWidth),
+									worldToScreenY(cellOriginWorldY + clipPropY2 * this.gridHeight),
+									Region.Op.REPLACE);
+						}
+						canvas.drawPath(path, this.knotBackgroundPaint);
+						canvas.drawPath(path, this.knotPaint);
 						final boolean drawTangents = false;
 						if (drawTangents) {
 							canvas.drawLine(
@@ -259,7 +316,6 @@ public class DrawingView extends View {
 				}
 			}
 		}
-		canvas.drawPath(path, this.knotPaint);
 	}
 
 	private void drawProposedSegment(final Canvas canvas)
