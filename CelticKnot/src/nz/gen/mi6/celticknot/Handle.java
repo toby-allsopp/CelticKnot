@@ -10,7 +10,7 @@ class Handle {
 	boolean adjacentTo(final Handle handle)
 	{
 		if (handle.row == this.row && handle.column == this.column) {
-			return true;
+			return this.handleIndex != handle.handleIndex;
 		}
 		switch (this.handleIndex) {
 			case 0:
