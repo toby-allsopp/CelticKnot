@@ -2,10 +2,12 @@ package nz.gen.mi6.celticknot;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.Matrix.ScaleToFit;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Path;
-import android.graphics.Region;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.util.FloatMath;
@@ -167,11 +169,11 @@ public class DrawingView extends View {
 
 		this.knotPaint.setARGB(0xFF, 0xFF, 0x00, 0x00);
 		this.knotPaint.setStyle(Paint.Style.STROKE);
-		this.knotPaint.setStrokeWidth(4 * this.worldToScreen);
+		this.knotPaint.setStrokeWidth(0.25f);
 
 		this.knotBackgroundPaint.setARGB(0xFF, 0x00, 0x00, 0x00);
 		this.knotBackgroundPaint.setStyle(Paint.Style.STROKE);
-		this.knotBackgroundPaint.setStrokeWidth(5 * this.worldToScreen);
+		this.knotBackgroundPaint.setStrokeWidth(0.3f);
 
 		this.proposedSegmentPaint.setARGB(0xFF, 0xFF, 0x00, 0xFF);
 		this.proposedSegmentPaint.setStyle(Paint.Style.STROKE);
@@ -225,96 +227,92 @@ public class DrawingView extends View {
 		for (int column = 0; column < this.model.getNumColumns() + 2; ++column) {
 			for (int row = 0; row < this.model.getNumRows() + 2; ++row) {
 				final Cell cell = this.model.getCell(column, row);
-				final float cellOriginWorldX = column * this.gridWidth;
-				final float cellOriginWorldY = row * this.gridHeight;
-				final int[] froms = { 0, 2, 4, 6, 1, 3, 5, 7 };
+				final Matrix matrix = new Matrix();
+				final RectF dst = new RectF(worldToScreenX(column * this.gridWidth), worldToScreenY(row
+						* this.gridHeight), worldToScreenX((column + 1) * this.gridWidth), worldToScreenY((row + 1)
+						* this.gridHeight));
+				final RectF src = new RectF(0, 0, 1, 1);
+				matrix.setRectToRect(src, dst, ScaleToFit.FILL);
+				canvas.save();
+				canvas.concat(matrix);
+				final int[] froms = { 0, 7, 6, 4, 2, 1, 5, 3 };
 				for (int i = 0; i < 8; ++i) {
 					final int from = froms[i];
 					final int to = cell.getConnectionFrom(from);
-					if (to != -1) {
-						final float startWorldX = cellOriginWorldX + handlePropX[from] * this.gridWidth;
-						final float stopWorldX = cellOriginWorldX + handlePropX[to] * this.gridWidth;
-						final float startWorldY = cellOriginWorldY + handlePropY[from] * this.gridHeight;
-						final float stopWorldY = cellOriginWorldY + handlePropY[to] * this.gridHeight;
-						final boolean startHorizontal = ((from / 2) & 1) == 1;
-						final boolean stopHorizontal = ((to / 2) & 1) == 1;
-						final float worldX1;
-						final float worldY1;
-						if (startHorizontal) {
-							worldX1 = cellOriginWorldX + (from / 4 == 0 ? 2 / 3.f : 1 / 3.f) * this.gridWidth;
-							worldY1 = startWorldY;
-						} else {
-							worldX1 = startWorldX;
-							worldY1 = cellOriginWorldY + (from / 4 == 0 ? 1 / 3.f : 2 / 3.f) * this.gridHeight;
-						}
-						final float worldX2;
-						final float worldY2;
-						if (stopHorizontal) {
-							worldX2 = cellOriginWorldX + (to / 4 == 0 ? 2 / 3.f : 1 / 3.f) * this.gridWidth;
-							worldY2 = stopWorldY;
-						} else {
-							worldX2 = stopWorldX;
-							worldY2 = cellOriginWorldY + (to / 4 == 0 ? 1 / 3.f : 2 / 3.f) * this.gridHeight;
-						}
-						path.reset();
-						path.moveTo(worldToScreenX(startWorldX), worldToScreenY(startWorldY));
-						path.cubicTo(
-								worldToScreenX(worldX1),
-								worldToScreenY(worldY1),
-								worldToScreenX(worldX2),
-								worldToScreenY(worldY2),
-								worldToScreenX(stopWorldX),
-								worldToScreenY(stopWorldY));
-						if (startHorizontal == stopHorizontal || true) {
-							final float clipPropX1, clipPropX2, clipPropY1, clipPropY2;
-							if (startHorizontal) {
-								clipPropY1 = 0.f;
-								clipPropY2 = 1.f;
-								if (from < 4) {
-									clipPropX1 = 0.5f;
-									clipPropX2 = 1.f;
-								} else {
-									clipPropX1 = 0.f;
-									clipPropX2 = .5f;
-								}
-							} else {
-								clipPropX1 = 0.f;
-								clipPropX2 = 1.f;
-								if (from < 4) {
-									clipPropY1 = 0.f;
-									clipPropY2 = .5f;
-								} else {
-									clipPropY1 = 0.5f;
-									clipPropY2 = 1.f;
-								}
-							}
-							canvas.clipRect(
-									worldToScreenX(cellOriginWorldX + clipPropX1 * this.gridWidth),
-									worldToScreenY(cellOriginWorldY + clipPropY1 * this.gridHeight),
-									worldToScreenX(cellOriginWorldX + clipPropX2 * this.gridWidth),
-									worldToScreenY(cellOriginWorldY + clipPropY2 * this.gridHeight),
-									Region.Op.REPLACE);
-						}
-						canvas.drawPath(path, this.knotBackgroundPaint);
-						canvas.drawPath(path, this.knotPaint);
-						final boolean drawTangents = false;
-						if (drawTangents) {
-							canvas.drawLine(
-									worldToScreenX(startWorldX),
-									worldToScreenY(startWorldY),
-									worldToScreenX(worldX1),
-									worldToScreenY(worldY1),
-									this.knotPaint);
-							canvas.drawLine(
-									worldToScreenX(worldX2),
-									worldToScreenY(worldY2),
-									worldToScreenX(stopWorldX),
-									worldToScreenY(stopWorldY),
-									this.knotPaint);
-						}
+					if (to != -1 && to > from) {
+						drawKnotSegment(canvas, path, from, to);
 					}
 				}
+				canvas.restore();
 			}
+		}
+	}
+
+	private void drawKnotSegment(final Canvas canvas, final Path path, final int from, final int to)
+	{
+		final float startWorldX = handlePropX[from];
+		final float stopWorldX = handlePropX[to];
+		final float startWorldY = handlePropY[from];
+		final float stopWorldY = handlePropY[to];
+		final boolean startHorizontal = ((from / 2) & 1) == 1;
+		final boolean stopHorizontal = ((to / 2) & 1) == 1;
+		final float worldX1;
+		final float worldY1;
+		final float controlProp = 1 / 3.f;
+		final float oneMinusControlProp = 1 - controlProp;
+		if (startHorizontal) {
+			worldX1 = from / 4 == 0 ? oneMinusControlProp : controlProp;
+			worldY1 = startWorldY;
+		} else {
+			worldX1 = startWorldX;
+			worldY1 = from / 4 == 0 ? controlProp : oneMinusControlProp;
+		}
+		final float worldX2;
+		final float worldY2;
+		if (stopHorizontal) {
+			worldX2 = to / 4 == 0 ? oneMinusControlProp : controlProp;
+			worldY2 = stopWorldY;
+		} else {
+			worldX2 = stopWorldX;
+			worldY2 = to / 4 == 0 ? controlProp : oneMinusControlProp;
+		}
+		path.reset();
+		path.moveTo(startWorldX, startWorldY);
+		path.cubicTo(worldX1, worldY1, worldX2, worldY2, stopWorldX, stopWorldY);
+		if (startHorizontal == stopHorizontal) {
+			final float clipPropX1, clipPropX2, clipPropY1, clipPropY2;
+			if (startHorizontal) {
+				clipPropY1 = 0.f;
+				clipPropY2 = 1.f;
+				if (from < 4) {
+					clipPropX1 = 0.5f;
+					clipPropX2 = 1.f;
+				} else {
+					clipPropX1 = 0.f;
+					clipPropX2 = .5f;
+				}
+			} else {
+				clipPropX1 = 0.f;
+				clipPropX2 = 1.f;
+				if (from < 4) {
+					clipPropY1 = 0.f;
+					clipPropY2 = .5f;
+				} else {
+					clipPropY1 = 0.5f;
+					clipPropY2 = 1.f;
+				}
+			}
+			// canvas.clipRect(clipPropX1, clipPropY1,
+			// clipPropX2, clipPropY2, Region.Op.REPLACE);
+		} else {
+			// canvas.clipRect(0, 0, 1, 1, Region.Op.REPLACE);
+		}
+		canvas.drawPath(path, this.knotBackgroundPaint);
+		canvas.drawPath(path, this.knotPaint);
+		final boolean drawTangents = false;
+		if (drawTangents) {
+			canvas.drawLine(startWorldX, startWorldY, worldX1, worldY1, this.knotPaint);
+			canvas.drawLine(worldX2, worldY2, stopWorldX, stopWorldY, this.knotPaint);
 		}
 	}
 
