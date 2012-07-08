@@ -123,9 +123,9 @@ public class DrawingView extends View {
 
 	private Handle mEndHandle;
 
-	private static final float[] handlePropX = { 1 / 3.f, 2 / 3.f, 3 / 3.f, 3 / 3.f, 2 / 3.f, 1 / 3.f, 0 / 3.f, 0 / 3.f };
+	private static final float[] handlePropX = { 0.f, .5f, 1.f, 1.f, 1.f, .5f, 0.f, 0.f };
 
-	private static final float[] handlePropY = { 0 / 3.f, 0 / 3.f, 1 / 3.f, 2 / 3.f, 3 / 3.f, 3 / 3.f, 2 / 3.f, 1 / 3.f };
+	private static final float[] handlePropY = { 0.f, 0.f, 0.f, .5f, 1.f, 1.f, 1.f, .5f };
 
 	private final Paint frameratePaint;
 
@@ -202,14 +202,14 @@ public class DrawingView extends View {
 		final long startNanos = System.nanoTime();
 		int saveCount;
 		canvas.drawColor(0xFFFFFFFF);
+		saveCount = canvas.save();
+		drawKnot(canvas);
+		canvas.restoreToCount(saveCount);
 		if (this.drawGrid) {
 			saveCount = canvas.save();
 			drawGrid(canvas);
 			canvas.restoreToCount(saveCount);
 		}
-		saveCount = canvas.save();
-		drawKnot(canvas);
-		canvas.restoreToCount(saveCount);
 		if (this.mStartHandle != null) {
 			drawSelectedHandle(canvas, this.mStartHandle);
 			if (this.mEndHandle != null) {
@@ -235,9 +235,9 @@ public class DrawingView extends View {
 				matrix.setRectToRect(src, dst, ScaleToFit.FILL);
 				canvas.save();
 				canvas.concat(matrix);
-				final int[] froms = { 0, 7, 6, 4, 2, 1, 5, 3 };
+				final int[] spinwise = { 4, 5, 6, 7, 0, 1, 2, 3 };
 				for (int i = 0; i < 8; ++i) {
-					final int from = froms[i];
+					final int from = spinwise[i];
 					final int to = cell.getConnectionFrom(from);
 					if (to != -1 && to > from) {
 						drawKnotSegment(canvas, path, from, to);
@@ -254,65 +254,121 @@ public class DrawingView extends View {
 		final float stopWorldX = handlePropX[to];
 		final float startWorldY = handlePropY[from];
 		final float stopWorldY = handlePropY[to];
-		final boolean startHorizontal = ((from / 2) & 1) == 1;
-		final boolean stopHorizontal = ((to / 2) & 1) == 1;
-		final float worldX1;
-		final float worldY1;
-		final float controlProp = 1 / 3.f;
-		final float oneMinusControlProp = 1 - controlProp;
-		if (startHorizontal) {
-			worldX1 = from / 4 == 0 ? oneMinusControlProp : controlProp;
-			worldY1 = startWorldY;
-		} else {
-			worldX1 = startWorldX;
-			worldY1 = from / 4 == 0 ? controlProp : oneMinusControlProp;
-		}
-		final float worldX2;
-		final float worldY2;
-		if (stopHorizontal) {
-			worldX2 = to / 4 == 0 ? oneMinusControlProp : controlProp;
-			worldY2 = stopWorldY;
-		} else {
-			worldX2 = stopWorldX;
-			worldY2 = to / 4 == 0 ? controlProp : oneMinusControlProp;
-		}
-		path.reset();
-		path.moveTo(startWorldX, startWorldY);
-		path.cubicTo(worldX1, worldY1, worldX2, worldY2, stopWorldX, stopWorldY);
-		if (startHorizontal == stopHorizontal) {
-			final float clipPropX1, clipPropX2, clipPropY1, clipPropY2;
-			if (startHorizontal) {
-				clipPropY1 = 0.f;
-				clipPropY2 = 1.f;
-				if (from < 4) {
-					clipPropX1 = 0.5f;
-					clipPropX2 = 1.f;
-				} else {
-					clipPropX1 = 0.f;
-					clipPropX2 = .5f;
-				}
-			} else {
-				clipPropX1 = 0.f;
-				clipPropX2 = 1.f;
-				if (from < 4) {
-					clipPropY1 = 0.f;
-					clipPropY2 = .5f;
-				} else {
-					clipPropY1 = 0.5f;
-					clipPropY2 = 1.f;
-				}
+		if ((to - from == 2 || from == 0 && to == 6) && (to & 1) == 0) {
+			final float radius = FloatMath.sqrt(2) / 2;
+			final float cx, cy;
+			final float startAngle;
+			switch (from) {
+				case 0:
+					if (to == 2) {
+						cx = .5f;
+						cy = -.5f;
+						startAngle = 45.f;
+					} else {
+						cx = -.5f;
+						cy = .5f;
+						startAngle = 315.f;
+					}
+					break;
+				case 2:
+					cx = 1.5f;
+					cy = .5f;
+					startAngle = 135.f;
+					break;
+				case 4:
+					cx = .5f;
+					cy = 1.5f;
+					startAngle = 225.f;
+					break;
+				default:
+					throw new AssertionError();
 			}
-			// canvas.clipRect(clipPropX1, clipPropY1,
-			// clipPropX2, clipPropY2, Region.Op.REPLACE);
+			final RectF oval = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
+			final float sweepAngle = 90.f;
+			// path.reset();
+			// path.addArc(oval, startAngle, sweepAngle);
+			// canvas.drawPath(path, this.knotBackgroundPaint);
+			// canvas.drawPath(path, this.knotPaint);
+			canvas.drawArc(oval, startAngle, sweepAngle, false, this.knotBackgroundPaint);
+			canvas.drawArc(oval, startAngle, sweepAngle, false, this.knotPaint);
+		} else if (from == 0 && to == 3 || from == 2 && to == 7 || from == 3 && to == 6 || from == 4 && to == 7) {
+			final float startX, startY;
+			final float stopX, stopY;
+			final float radius = FloatMath.sqrt(2) / 2;
+			final float cx, cy;
+			final float startAngle;
+			final float sweepAngle = 45.f;
+			switch (from) {
+				case 0:
+					startX = 1.f;
+					startY = radius;
+					cx = 1.f;
+					cy = 0.f;
+					startAngle = 90.f;
+					stopX = 0.f;
+					stopY = 0.f;
+					break;
+				case 2:
+					startX = 1.f;
+					startY = 0.f;
+					cx = 0.f;
+					cy = 0.f;
+					startAngle = 45.f;
+					stopX = 0.f;
+					stopY = radius;
+					break;
+				case 3:
+					startX = 0.f;
+					startY = 1.f;
+					cx = 1.f;
+					cy = 1.f;
+					startAngle = 225.f;
+					stopX = 1.f;
+					stopY = 1.f - radius;
+					break;
+				case 4:
+					startX = 0.f;
+					startY = 1.f - radius;
+					cx = 0.f;
+					cy = 1.f;
+					startAngle = 270.f;
+					stopX = 1.f;
+					stopY = 1.f;
+					break;
+				default:
+					throw new AssertionError();
+			}
+			final RectF oval = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
+			path.reset();
+			path.moveTo(startX, startY);
+			// path.lineTo(.5f, .5f);
+			path.arcTo(oval, startAngle, sweepAngle);
+			path.lineTo(stopX, stopY);
+			canvas.drawPath(path, this.knotBackgroundPaint);
+			canvas.drawPath(path, this.knotPaint);
+			// canvas.drawArc(oval, startAngle, sweepAngle, false,
+			// this.knotBackgroundPaint);
+			// canvas.drawArc(oval, startAngle, sweepAngle, false,
+			// this.knotPaint);
 		} else {
-			// canvas.clipRect(0, 0, 1, 1, Region.Op.REPLACE);
-		}
-		canvas.drawPath(path, this.knotBackgroundPaint);
-		canvas.drawPath(path, this.knotPaint);
-		final boolean drawTangents = false;
-		if (drawTangents) {
-			canvas.drawLine(startWorldX, startWorldY, worldX1, worldY1, this.knotPaint);
-			canvas.drawLine(worldX2, worldY2, stopWorldX, stopWorldY, this.knotPaint);
+			final float worldX1 = .5f;
+			final float worldY1 = .5f;
+			final float worldX2 = .5f;
+			final float worldY2 = .5f;
+			final float adjustStartX = (handlePropX[from] - .5f) * .3f;
+			final float adjustStopX = (handlePropX[to] - .5f) * .3f;
+			final float adjustStartY = (handlePropY[from] - .5f) * .3f;
+			final float adjustStopY = (handlePropY[to] - .5f) * .3f;
+			path.reset();
+			path.moveTo(startWorldX + adjustStartX, startWorldY + adjustStartY);
+			path.cubicTo(worldX1, worldY1, worldX2, worldY2, stopWorldX + adjustStopX, stopWorldY + adjustStopY);
+			canvas.drawPath(path, this.knotBackgroundPaint);
+			canvas.drawPath(path, this.knotPaint);
+			final boolean drawTangents = false;
+			if (drawTangents) {
+				canvas.drawLine(startWorldX, startWorldY, worldX1, worldY1, this.gridPaint);
+				canvas.drawLine(worldX2, worldY2, stopWorldX, stopWorldY, this.gridPaint);
+			}
 		}
 	}
 
@@ -363,26 +419,13 @@ public class DrawingView extends View {
 				1,
 				this.model.getNumColumns() + 2,
 				(int) FloatMath.floor(screenToWorldX(width)));
-		final float handleLength = Math.min(this.gridWidth, this.gridHeight) / 10 * this.worldToScreen;
 		for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
 			final float y = worldToScreenY(yi * this.gridHeight);
 			canvas.drawLine(minScreenX, y, maxScreenX, y, this.gridPaint);
-			for (int xi = firstVertGridIndex; xi < lastVertGridIndex; ++xi) {
-				final float x1 = worldToScreenX(xi * this.gridWidth - this.gridWidth / 3);
-				final float x2 = worldToScreenX(xi * this.gridWidth + this.gridWidth / 3);
-				canvas.drawLine(x1, y - handleLength, x1, y + handleLength, this.gridPaint);
-				canvas.drawLine(x2, y - handleLength, x2, y + handleLength, this.gridPaint);
-			}
 		}
 		for (int xi = firstVertGridIndex; xi < lastVertGridIndex; ++xi) {
 			final float x = worldToScreenX(xi * this.gridWidth);
 			canvas.drawLine(x, minScreenY, x, maxScreenY, this.gridPaint);
-			for (int yi = firstHorizGridIndex; yi < lastHorizGridIndex; ++yi) {
-				final float y1 = worldToScreenY(yi * this.gridHeight - this.gridHeight / 3);
-				final float y2 = worldToScreenY(yi * this.gridHeight + this.gridHeight / 3);
-				canvas.drawLine(x - handleLength, y1, x + handleLength, y1, this.gridPaint);
-				canvas.drawLine(x - handleLength, y2, x + handleLength, y2, this.gridPaint);
-			}
 		}
 	}
 
