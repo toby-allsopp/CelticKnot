@@ -111,10 +111,15 @@ public class DrawingView extends View {
 	private DrawingModel model;
 
 	private final GestureDetector gestureDetector;
+
+	private final GestureDetector gestureDetector;
 	private final ScaleGestureDetector scaleGestureDetector;
 
 	/** World height of the grid */
 	private final float gridWidth = 20.f;
+
+	/** World width of the grid */
+	private final float gridHeight = 20.f;
 
 	/** World width of the grid */
 	private final float gridHeight = 20.f;
@@ -240,6 +245,9 @@ public class DrawingView extends View {
 					final int from = spinwise[i];
 					final int to = cell.getConnectionFrom(from);
 					if (to != -1 && to > from) {
+						if (from == 2) {
+							// canvas.clipRect(src);
+						}
 						drawKnotSegment(canvas, path, from, to);
 					}
 				}
@@ -254,6 +262,22 @@ public class DrawingView extends View {
 		final float stopWorldX = handlePropX[to];
 		final float startWorldY = handlePropY[from];
 		final float stopWorldY = handlePropY[to];
+		final float sqrt8 = FloatMath.sqrt(2) * 2;
+		final float adjustStartX;
+		final float adjustStopX;
+		final float adjustStartY;
+		final float adjustStopY;
+		if (from == 2) {
+			adjustStartX = -.3f / sqrt8;
+			adjustStopX = .3f / sqrt8;
+			adjustStartY = .3f / sqrt8;
+			adjustStopY = -.3f / sqrt8;
+		} else {
+			adjustStartX = 0.f;
+			adjustStopX = 0.f;
+			adjustStartY = 0.f;
+			adjustStopY = 0.f;
+		}
 		if ((to - from == 2 || from == 0 && to == 6) && (to & 1) == 0) {
 			final float radius = FloatMath.sqrt(2) / 2;
 			final float cx, cy;
@@ -346,29 +370,13 @@ public class DrawingView extends View {
 			path.lineTo(stopX, stopY);
 			canvas.drawPath(path, this.knotBackgroundPaint);
 			canvas.drawPath(path, this.knotPaint);
-			// canvas.drawArc(oval, startAngle, sweepAngle, false,
-			// this.knotBackgroundPaint);
-			// canvas.drawArc(oval, startAngle, sweepAngle, false,
-			// this.knotPaint);
-		} else {
-			final float worldX1 = .5f;
-			final float worldY1 = .5f;
-			final float worldX2 = .5f;
-			final float worldY2 = .5f;
-			final float adjustStartX = (handlePropX[from] - .5f) * .3f;
-			final float adjustStopX = (handlePropX[to] - .5f) * .3f;
-			final float adjustStartY = (handlePropY[from] - .5f) * .3f;
-			final float adjustStopY = (handlePropY[to] - .5f) * .3f;
+		} else if ((from & 1) == 0 && to == from + 4) {
 			path.reset();
 			path.moveTo(startWorldX + adjustStartX, startWorldY + adjustStartY);
-			path.cubicTo(worldX1, worldY1, worldX2, worldY2, stopWorldX + adjustStopX, stopWorldY + adjustStopY);
+			path.lineTo(stopWorldX + adjustStopX, stopWorldY + adjustStopY);
 			canvas.drawPath(path, this.knotBackgroundPaint);
 			canvas.drawPath(path, this.knotPaint);
-			final boolean drawTangents = false;
-			if (drawTangents) {
-				canvas.drawLine(startWorldX, startWorldY, worldX1, worldY1, this.gridPaint);
-				canvas.drawLine(worldX2, worldY2, stopWorldX, stopWorldY, this.gridPaint);
-			}
+		} else {
 		}
 	}
 
