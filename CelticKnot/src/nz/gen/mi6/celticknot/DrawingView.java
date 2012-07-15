@@ -224,31 +224,84 @@ public class DrawingView extends View {
 	private void drawKnot(final Canvas canvas)
 	{
 		final Path path = new Path();
-		for (int column = 0; column < this.model.getNumColumns() + 2; ++column) {
-			for (int row = 0; row < this.model.getNumRows() + 2; ++row) {
-				final Cell cell = this.model.getCell(column, row);
-				final Matrix matrix = new Matrix();
-				final RectF dst = new RectF(worldToScreenX(column * this.gridWidth), worldToScreenY(row
-						* this.gridHeight), worldToScreenX((column + 1) * this.gridWidth), worldToScreenY((row + 1)
-						* this.gridHeight));
-				final RectF src = new RectF(0, 0, 1, 1);
-				matrix.setRectToRect(src, dst, ScaleToFit.FILL);
-				canvas.save();
-				canvas.concat(matrix);
-				final int[] spinwise = { 4, 5, 6, 7, 0, 1, 2, 3 };
-				for (int i = 0; i < 8; ++i) {
-					final int from = spinwise[i];
-					final int to = cell.getConnectionFrom(from);
-					if (to != -1 && to > from) {
-						if (from == 2) {
-							// canvas.clipRect(src);
-						}
-						drawKnotSegment(canvas, path, from, to);
-					}
+		final int numColumns = this.model.getNumColumns();
+		final int numRows = this.model.getNumRows();
+		for (int column = 0; column < numColumns + 2; ++column) {
+			final boolean notLastColumn = column < numColumns + 1;
+			for (int row = 0; row < numRows + 2; ++row) {
+				final boolean notLastRow = row < numRows + 1;
+				drawCellInner(column, row, canvas, path);
+				if (notLastColumn) {
+					drawCellVertEdge(column, row, canvas, path);
 				}
-				canvas.restore();
+				if (notLastRow) {
+					drawCellHorizEdge(column, row, canvas, path);
+				}
+				if (notLastColumn && notLastRow) {
+					drawCellCorner(column, row, canvas, path);
+				}
 			}
 		}
+	}
+
+	private void drawCellCorner(final int column, final int row, final Canvas canvas, final Path path)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+	private void drawCellHorizEdge(final int column, final int row, final Canvas canvas, final Path path)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+	private void drawCellVertEdge(final int column, final int row, final Canvas canvas, final Path path)
+	{
+		final Cell left = this.model.getCell(column, row);
+		final Cell right = this.model.getCell(column + 1, row);
+		if (left.getConnectionFrom(2) == 4) {
+			// TODO draw part of the arc 180 to 0
+			return;
+		}
+		if (right.getConnectionFrom(6) == 0) {
+			// TODO draw part of the arc 0 to 180
+		}
+		if (left.getConnectionFrom(3) == 4) {
+			// TODO draw the cornery bit
+		}
+		if (left.getConnectionFrom(3) == 6) {
+			// TODO draw part of the arc 270 to 90
+		}
+		if (right.getConnectionFrom(4) == 7) {
+			// TODO draw part of the arc fro, 270 to 90
+		}
+	}
+
+	private void drawCellInner(final int column, final int row, final Canvas canvas, final Path path)
+	{
+		final Cell cell = this.model.getCell(column, row);
+		final Matrix matrix = new Matrix();
+		final RectF dst = new RectF(worldToScreenX(column * this.gridWidth + this.gridWidth / 4), worldToScreenY(row
+				* this.gridHeight
+				+ this.gridHeight
+				/ 4), worldToScreenX((column + 1) * this.gridWidth - this.gridWidth / 4), worldToScreenY((row + 1)
+				* this.gridHeight
+				- this.gridHeight
+				/ 4));
+		final RectF src = new RectF(0, 0, 1, 1);
+		matrix.setRectToRect(src, dst, ScaleToFit.FILL);
+		canvas.save();
+		canvas.concat(matrix);
+		final int[] spinwise = { 4, 5, 6, 7, 0, 1, 2, 3 };
+		for (int i = 0; i < 8; ++i) {
+			final int from = spinwise[i];
+			final int to = cell.getConnectionFrom(from);
+			if (to != -1 && to > from) {
+				drawKnotSegment(canvas, path, from, to);
+			}
+		}
+		canvas.restore();
 	}
 
 	private void drawKnotSegment(final Canvas canvas, final Path path, final int from, final int to)
@@ -262,7 +315,7 @@ public class DrawingView extends View {
 		final float adjustStopX;
 		final float adjustStartY;
 		final float adjustStopY;
-		if (from == 2) {
+		if (false/* from == 2 */) {
 			adjustStartX = -.3f / sqrt8;
 			adjustStopX = .3f / sqrt8;
 			adjustStartY = .3f / sqrt8;
