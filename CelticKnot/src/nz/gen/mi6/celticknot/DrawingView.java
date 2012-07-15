@@ -111,15 +111,10 @@ public class DrawingView extends View {
 	private DrawingModel model;
 
 	private final GestureDetector gestureDetector;
-
-	private final GestureDetector gestureDetector;
 	private final ScaleGestureDetector scaleGestureDetector;
 
 	/** World height of the grid */
 	private final float gridWidth = 20.f;
-
-	/** World width of the grid */
-	private final float gridHeight = 20.f;
 
 	/** World width of the grid */
 	private final float gridHeight = 20.f;
