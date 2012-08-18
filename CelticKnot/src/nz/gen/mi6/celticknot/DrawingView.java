@@ -123,7 +123,7 @@ public class DrawingView extends GLSurfaceView {
 
 	private final Paint frameratePaint = new Paint();
 
-	private final Renderer renderer = new MyGLRenderer();
+	private final MyGLRenderer renderer = new MyGLRenderer();
 
 	public DrawingView(final Context context, final AttributeSet attrs)
 	{
@@ -152,6 +152,7 @@ public class DrawingView extends GLSurfaceView {
 	public void setModel(final DrawingModel model)
 	{
 		this.model = model;
+		this.renderer.setModel(model);
 		invalidate();
 	}
 

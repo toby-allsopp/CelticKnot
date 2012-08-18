@@ -16,6 +16,8 @@
 
 package nz.gen.mi6.celticknot;
 
+import java.util.ArrayList;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -33,8 +35,18 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 	private final float[] mVMatrix = new float[16];
 	private final float[] mRotationMatrix = new float[16];
 
-	private LineSegment mLineSegment;
-	private Arc mArc;
+	private final ArrayList<GLDrawable> objects = new ArrayList<GLDrawable>();
+
+	private ArcShaders arcShaders;
+
+	public void setModel(final DrawingModel model)
+	{
+		synchronized (this.objects) {
+			this.objects.clear();
+			this.objects.add(new Arc(0.f, 0.f, 0.f, (float) Math.PI, .5f, .1f));
+			this.objects.add(new LineSegment(-.4f, .1f, .4f, -.1f, .1f));
+		}
+	}
 
 	@Override
 	public void onSurfaceCreated(final GL10 unused, final EGLConfig config)
@@ -43,8 +55,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		// Set the background frame color
 		GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-		this.mLineSegment = new LineSegment(.3f);
-		this.mArc = new Arc(0.f, (float) Math.PI, .5f, .1f);
+		this.arcShaders = new ArcShaders();
 	}
 
 	@Override
@@ -64,9 +75,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		// Calculate the projection and view transformation
 		Matrix.multiplyMM(this.mMVPMatrix, 0, this.mProjMatrix, 0, this.mVMatrix, 0);
 
-		// Draw square
-		// this.mLineSegment.draw(this.mMVPMatrix);
-		this.mArc.draw(this.mMVPMatrix);
+		synchronized (this.objects) {
+			for (final GLDrawable object : this.objects) {
+				object.draw(this.arcShaders, this.mMVPMatrix);
+			}
+		}
 
 		final long frameNanos = System.nanoTime() - startNanos;
 		Log.i(TAG, "drawFrame took " + frameNanos / 1000. / 1000. + "ms");

@@ -6,7 +6,7 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 
-class LineSegment {
+class LineSegment implements GLDrawable {
 
 	private final FloatBuffer vertexBuffer;
 
@@ -21,90 +21,53 @@ class LineSegment {
 	// Set color with red, green, blue and alpha (opacity) values
 	private final float color[] = { 0.2f, 0.709803922f, 0.898039216f, 1.0f };
 
-	private final String vertexShaderCode =
-			// This matrix member variable provides a hook to manipulate
-			// the coordinates of the objects that use this vertex shader
-			"uniform mat4 uMVPMatrix;" +
-					"attribute vec4 vPosition;" +
-					"void main() {" +
-					// the matrix must be included as a modifier of gl_Position
-					"  gl_Position = vPosition * uMVPMatrix;"
-					+
-					"}";
-
-	private final String fragmentShaderCode =
-			"precision mediump float;" +
-					"uniform vec4 vColor;" +
-					"void main() {" +
-					"  gl_FragColor = vColor;" +
-					"}";
-
-	private final int program;
-	private int positionHandle;
-	private int colorHandle;
-	private int MVPMatrixHandle;
-
-	LineSegment(final float width)
+	LineSegment(final float x1, final float y1, final float x2, final float y2, final float width)
 	{
+		final double a = Math.atan2(y2 - y1, x2 - x1);
+		final float dx1 = (float) (width / 2 * Math.cos(a + Math.PI / 2));
+		final float dy1 = (float) (width / 2 * Math.sin(a + Math.PI / 2));
+		final float xm = (x1 + x2) / 2.f;
+		final float ym = (y1 + y2) / 2.f;
 		this.coords = new float[] {
-				0.5f, -width, 0.f, // 3
-				0.5f, width, 0.f, // 4
-				0.f, -width, -1.f, // 2
-				0.f, width, -1.f, // 5
-				-0.5f, -width, 0.f, // 1
-				-0.5f, width, 0.f, // 0
+				x2 + dx1, y2 + dy1, 0.f, // 3
+				x2 - dx1, y2 - dy1, 0.f, // 4
+				xm + dx1, ym + dy1, -1.f, // 2
+				xm - dx1, ym - dy1, -1.f, // 5
+				x1 + dx1, y1 + dy1, 0.f, // 1
+				x1 - dx1, y1 - dy1, 0.f, // 0
 		};
 		final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
 		bb.order(ByteOrder.nativeOrder());
 		this.vertexBuffer = bb.asFloatBuffer();
 		this.vertexBuffer.put(this.coords);
 		this.vertexBuffer.position(0);
-
-		final int vertexShader = MyGLRenderer.loadShader(GLES20.GL_VERTEX_SHADER, this.vertexShaderCode);
-		final int fragmentShader = MyGLRenderer.loadShader(GLES20.GL_FRAGMENT_SHADER, this.fragmentShaderCode);
-
-		this.program = GLES20.glCreateProgram(); // create empty OpenGL ES
-													// Program
-		GLES20.glAttachShader(this.program, vertexShader); // add the vertex
-															// shader to program
-		GLES20.glAttachShader(this.program, fragmentShader); // add the
-																// fragment
-																// shader to
-																// program
-		GLES20.glLinkProgram(this.program); // creates OpenGL ES program
 	}
 
-	public void draw(final float[] mvpMatrix)
+	@Override
+	public void draw(final ArcShaders shaders, final float[] mvpMatrix)
 	{
 		// Add program to OpenGL environment
-		GLES20.glUseProgram(this.program);
-
-		this.positionHandle = GLES20.glGetAttribLocation(this.program, "vPosition");
-		MyGLRenderer.checkGlError("glGetAttribLocation");
-		this.colorHandle = GLES20.glGetUniformLocation(this.program, "vColor");
-		MyGLRenderer.checkGlError("glGetUniformLocation");
-		this.MVPMatrixHandle = GLES20.glGetUniformLocation(this.program, "uMVPMatrix");
-		MyGLRenderer.checkGlError("glGetUniformLocation");
+		GLES20.glUseProgram(shaders.program);
 
 		// Enable a handle to the triangle vertices
-		GLES20.glEnableVertexAttribArray(this.positionHandle);
+		GLES20.glEnableVertexAttribArray(shaders.positionHandle);
 
 		// Prepare the triangle coordinate data
-		GLES20.glVertexAttribPointer(this.positionHandle, COORDS_PER_VERTEX,
+		GLES20.glVertexAttribPointer(shaders.positionHandle, COORDS_PER_VERTEX,
 				GLES20.GL_FLOAT, false,
 				vertexStride, this.vertexBuffer);
 
 		// Set color for drawing the triangle
-		GLES20.glUniform4fv(this.colorHandle, 1, this.color, 0);
+		GLES20.glUniform4fv(shaders.colorHandle, 1, this.color, 0);
 
 		// Apply the projection and view transformation
-		GLES20.glUniformMatrix4fv(this.MVPMatrixHandle, 1, false, mvpMatrix, 0);
+		GLES20.glUniformMatrix4fv(shaders.MVPMatrixHandle, 1, false, mvpMatrix, 0);
 		MyGLRenderer.checkGlError("glUniformMatrix4fv");
 
 		// Draw the square
 		GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, this.coords.length / COORDS_PER_VERTEX);
 
 		// Disable vertex array
-		GLES20.glDisableVertexAttribArray(this.positionHandle);
+		GLES20.glDisableVertexAttribArray(shaders.positionHandle);
 	}
 }
