@@ -5,6 +5,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
+import android.opengl.Matrix;
 import android.util.FloatMath;
 
 class Arc implements GLDrawable {
@@ -15,10 +16,6 @@ class Arc implements GLDrawable {
 	private static final int COORDS_PER_VERTEX = 3;
 	private final float[] coords;
 
-	private final static int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes
-																	// per
-																	// vertex
-
 	// Set color with red, green, blue and alpha (opacity) values
 	private final float color[] = { 0.2f, 0.709803922f, 0.898039216f, 1.0f };
 
@@ -28,7 +25,7 @@ class Arc implements GLDrawable {
 			final float startAngle,
 			final float endAngle,
 			final float radius,
-			final float width)
+			final float width, final float[] matrix)
 	{
 		final int numEdges = 50;
 		final float deltaAngle = (endAngle - startAngle) / numEdges;
@@ -36,6 +33,7 @@ class Arc implements GLDrawable {
 		final float r2 = r1 + width;
 		this.coords = new float[(numEdges * 2 + 2) * COORDS_PER_VERTEX];
 		int v = 0;
+		final float[] vec = new float[8];
 		for (int e = 0; e <= numEdges; ++e) {
 			final float angle = startAngle + e * deltaAngle;
 			final float cos = FloatMath.cos(angle);
@@ -45,13 +43,23 @@ class Arc implements GLDrawable {
 			final float x2 = cx + r2 * cos;
 			final float y2 = cy + r2 * sin;
 			final float z = (FloatMath.cos((angle - startAngle) / (endAngle - startAngle) * (float) Math.PI * 2) - 1.f) / 2.f;
-			this.coords[v * COORDS_PER_VERTEX + 0] = x1;
-			this.coords[v * COORDS_PER_VERTEX + 1] = y1;
-			this.coords[v * COORDS_PER_VERTEX + 2] = z;
+			vec[0] = x1;
+			vec[1] = y1;
+			vec[2] = z;
+			vec[3] = 1;
+			Matrix.multiplyMV(vec, 4, matrix, 0, vec, 0);
+			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
+			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
+			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
 			++v;
-			this.coords[v * COORDS_PER_VERTEX + 0] = x2;
-			this.coords[v * COORDS_PER_VERTEX + 1] = y2;
-			this.coords[v * COORDS_PER_VERTEX + 2] = z;
+			vec[0] = x2;
+			vec[1] = y2;
+			vec[2] = z;
+			vec[3] = 1;
+			Matrix.multiplyMV(vec, 4, matrix, 0, vec, 0);
+			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
+			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
+			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
 			++v;
 		}
 		final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
@@ -77,9 +85,13 @@ class Arc implements GLDrawable {
 		GLES20.glEnableVertexAttribArray(arcShaders.positionHandle);
 
 		// Prepare the triangle coordinate data
-		GLES20.glVertexAttribPointer(arcShaders.positionHandle, COORDS_PER_VERTEX,
-				GLES20.GL_FLOAT, false,
-				vertexStride, this.vertexBuffer);
+		GLES20.glVertexAttribPointer(
+				arcShaders.positionHandle,
+				COORDS_PER_VERTEX,
+				GLES20.GL_FLOAT,
+				false,
+				COORDS_PER_VERTEX * 4,
+				this.vertexBuffer);
 
 		// Set color for drawing the triangle
 		GLES20.glUniform4fv(arcShaders.colorHandle, 1, this.color, 0);

@@ -5,6 +5,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
+import android.opengl.Matrix;
 
 class LineSegment implements GLDrawable {
 
@@ -21,7 +22,7 @@ class LineSegment implements GLDrawable {
 	// Set color with red, green, blue and alpha (opacity) values
 	private final float color[] = { 0.2f, 0.709803922f, 0.898039216f, 1.0f };
 
-	LineSegment(final float x1, final float y1, final float x2, final float y2, final float width)
+	LineSegment(final float x1, final float y1, final float x2, final float y2, final float width, final float[] matrix)
 	{
 		final double a = Math.atan2(y2 - y1, x2 - x1);
 		final float dx1 = (float) (width / 2 * Math.cos(a + Math.PI / 2));
@@ -36,6 +37,16 @@ class LineSegment implements GLDrawable {
 				x1 + dx1, y1 + dy1, 0.f, // 1
 				x1 - dx1, y1 - dy1, 0.f, // 0
 		};
+		if (matrix != null)
+		{
+			final float[] vec = new float[8];
+			for (int i = 0; i < this.coords.length / COORDS_PER_VERTEX; ++i) {
+				System.arraycopy(this.coords, i * COORDS_PER_VERTEX, vec, 0, COORDS_PER_VERTEX);
+				vec[3] = 1; // because we know that COORDS_PER_VERTEX == 3
+				Matrix.multiplyMV(vec, 4, matrix, 0, vec, 0);
+				System.arraycopy(vec, 4, this.coords, i * COORDS_PER_VERTEX, COORDS_PER_VERTEX);
+			}
+		}
 		final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
 		bb.order(ByteOrder.nativeOrder());
 		this.vertexBuffer = bb.asFloatBuffer();
