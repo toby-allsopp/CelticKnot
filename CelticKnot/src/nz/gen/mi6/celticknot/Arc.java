@@ -16,8 +16,11 @@ class Arc implements GLDrawable {
 	private static final int COORDS_PER_VERTEX = 3;
 	private final float[] coords;
 
+	private FloatBuffer texCoordBuffer;
+
 	// Set color with red, green, blue and alpha (opacity) values
-	private final float color[] = { 0.2f, 0.709803922f, 0.898039216f, 1.0f };
+	private final float outsideColor[] = { 0.f, 0.f, 0.f, 1.0f };
+	private final float insideColor[] = { 1.f, 0.f, 0.f, 1.0f };
 
 	Arc(
 			final float cx,
@@ -31,7 +34,9 @@ class Arc implements GLDrawable {
 		final float deltaAngle = (endAngle - startAngle) / numEdges;
 		final float r1 = radius - width / 2.f;
 		final float r2 = r1 + width;
-		this.coords = new float[(numEdges * 2 + 2) * COORDS_PER_VERTEX];
+		final int numVertices = numEdges * 2 + 2;
+		this.coords = new float[numVertices * COORDS_PER_VERTEX];
+		final float[] texcoords = new float[numVertices * 2];
 		int v = 0;
 		final float[] vec = new float[8];
 		for (int e = 0; e <= numEdges; ++e) {
@@ -51,6 +56,8 @@ class Arc implements GLDrawable {
 			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
 			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
 			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
+			texcoords[v * 2 + 0] = 0.f;
+			texcoords[v * 2 + 1] = 0.f;
 			++v;
 			vec[0] = x2;
 			vec[1] = y2;
@@ -60,14 +67,24 @@ class Arc implements GLDrawable {
 			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
 			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
 			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
+			texcoords[v * 2 + 0] = 1.f;
+			texcoords[v * 2 + 1] = 0.f;
 			++v;
 		}
-		final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
-		bb.order(ByteOrder.nativeOrder());
-		this.vertexBuffer = bb.asFloatBuffer();
-		this.vertexBuffer.put(this.coords);
-		this.vertexBuffer.position(0);
-
+		{
+			final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
+			bb.order(ByteOrder.nativeOrder());
+			this.vertexBuffer = bb.asFloatBuffer();
+			this.vertexBuffer.put(this.coords);
+			this.vertexBuffer.position(0);
+		}
+		{
+			final ByteBuffer bb = ByteBuffer.allocateDirect(texcoords.length * 4);
+			bb.order(ByteOrder.nativeOrder());
+			this.texCoordBuffer = bb.asFloatBuffer();
+			this.texCoordBuffer.put(texcoords);
+			this.texCoordBuffer.position(0);
+		}
 	}
 
 	/*
@@ -83,6 +100,7 @@ class Arc implements GLDrawable {
 
 		// Enable a handle to the triangle vertices
 		GLES20.glEnableVertexAttribArray(arcShaders.positionHandle);
+		GLES20.glEnableVertexAttribArray(arcShaders.texCoordHandle);
 
 		// Prepare the triangle coordinate data
 		GLES20.glVertexAttribPointer(
@@ -93,8 +111,12 @@ class Arc implements GLDrawable {
 				COORDS_PER_VERTEX * 4,
 				this.vertexBuffer);
 
+		// Prepare the texture data
+		GLES20.glVertexAttribPointer(arcShaders.texCoordHandle, 2, GLES20.GL_FLOAT, false, 2 * 4, this.texCoordBuffer);
+
 		// Set color for drawing the triangle
-		GLES20.glUniform4fv(arcShaders.colorHandle, 1, this.color, 0);
+		GLES20.glUniform4fv(arcShaders.outsideColorHandle, 1, this.outsideColor, 0);
+		GLES20.glUniform4fv(arcShaders.insideColorHandle, 1, this.insideColor, 0);
 
 		// Apply the projection and view transformation
 		GLES20.glUniformMatrix4fv(arcShaders.MVPMatrixHandle, 1, false, mvpMatrix, 0);
@@ -105,5 +127,6 @@ class Arc implements GLDrawable {
 
 		// Disable vertex array
 		GLES20.glDisableVertexAttribArray(arcShaders.positionHandle);
+		GLES20.glDisableVertexAttribArray(arcShaders.texCoordHandle);
 	}
 }

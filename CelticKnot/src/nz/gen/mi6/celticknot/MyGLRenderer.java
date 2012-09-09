@@ -235,7 +235,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 	{
 
 		// Set the background frame color
-		GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 		this.arcShaders = new ArcShaders();
 	}
@@ -306,7 +306,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 		// add the source code to the shader and compile it
 		GLES20.glShaderSource(shader, shaderCode);
+		MyGLRenderer.checkGlError("glGetAttribLocation");
 		GLES20.glCompileShader(shader);
+		MyGLRenderer.checkGlError("glGetAttribLocation");
 
 		return shader;
 	}
