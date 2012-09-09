@@ -6,6 +6,7 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 class LineSegment implements GLDrawable {
 
@@ -19,21 +20,25 @@ class LineSegment implements GLDrawable {
 																	// per
 																	// vertex
 
+	private static final String LOG_TAG = "LineSegment";
+
 	// Set color with red, green, blue and alpha (opacity) values
 	private final float color[] = { 0.2f, 0.709803922f, 0.898039216f, 1.0f };
 
 	LineSegment(final float x1, final float y1, final float x2, final float y2, final float width, final float[] matrix)
 	{
+		Log.d(LOG_TAG, String.format("(%.4f,%.4f)->(%.4f,%.4f) [%.4f]", x1, y1, x2, y2, width));
 		final double a = Math.atan2(y2 - y1, x2 - x1);
 		final float dx1 = (float) (width / 2 * Math.cos(a + Math.PI / 2));
 		final float dy1 = (float) (width / 2 * Math.sin(a + Math.PI / 2));
 		final float xm = (x1 + x2) / 2.f;
 		final float ym = (y1 + y2) / 2.f;
+		Log.d(LOG_TAG, String.format("a=%.4f dx=%.4f dy=%.4f", a, dx1, dy1));
 		this.coords = new float[] {
 				x2 + dx1, y2 + dy1, 0.f, // 3
 				x2 - dx1, y2 - dy1, 0.f, // 4
-				xm + dx1, ym + dy1, -1.f, // 2
-				xm - dx1, ym - dy1, -1.f, // 5
+				xm + dx1, ym + dy1, -width, // 2
+				xm - dx1, ym - dy1, -width, // 5
 				x1 + dx1, y1 + dy1, 0.f, // 1
 				x1 - dx1, y1 - dy1, 0.f, // 0
 		};

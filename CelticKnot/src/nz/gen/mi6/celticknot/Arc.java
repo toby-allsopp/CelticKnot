@@ -42,7 +42,7 @@ class Arc implements GLDrawable {
 			final float y1 = cy + r1 * sin;
 			final float x2 = cx + r2 * cos;
 			final float y2 = cy + r2 * sin;
-			final float z = (FloatMath.cos((angle - startAngle) / (endAngle - startAngle) * (float) Math.PI * 2) - 1.f) / 2.f;
+			final float z = -FloatMath.sin((angle - startAngle) / (endAngle - startAngle) * (float) Math.PI) * width;
 			vec[0] = x1;
 			vec[1] = y1;
 			vec[2] = z;

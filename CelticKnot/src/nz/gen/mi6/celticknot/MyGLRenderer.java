@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import android.graphics.RectF;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -35,11 +34,17 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 	private final float[] mMVPMatrix = new float[16];
 	private final float[] mProjMatrix = new float[16];
 	private final float[] mVMatrix = new float[16];
-	private final float[] mRotationMatrix = new float[16];
+
+	private float cx;
+	private float cy;
 
 	private final ArrayList<GLDrawable> objects = new ArrayList<GLDrawable>();
 
 	private ArcShaders arcShaders;
+
+	private int width;
+
+	private int height;
 
 	public void setModel(final DrawingModel model)
 	{
@@ -47,10 +52,16 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			this.objects.clear();
 			/*this.objects.add(new Arc(0.f, 0.f, 0.f, (float) Math.PI, .5f, .1f));
 			this.objects.add(new LineSegment(-.4f, .1f, .4f, -.1f, .1f));*/
+			// this.objects.add(new LineSegment(0, 0, 1, 1, .1f, null));
+			// this.objects.add(new LineSegment(0, 1, 1, 0, .1f, null));
 			final float[] matrix = new float[16];
 
 			for (int column = 0; column < model.getNumColumns() + 2; ++column) {
 				for (int row = 0; row < model.getNumRows() + 2; ++row) {
+					final boolean skip = false; /*column != 1 || row != 0;*/
+					if (skip) {
+						continue;
+					}
 					final Cell cell = model.getCell(column, row);
 					Matrix.setIdentityM(matrix, 0);
 					Matrix.translateM(matrix, 0, column, row, 0);
@@ -72,6 +83,14 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 	private static final float[] handlePropY = { 0.f, 0.f, 0.f, .5f, 1.f, 1.f, 1.f, .5f };
 
+	private float w = 5.f;
+
+	private float h = 5.f;
+
+	private float rh;
+
+	private float rw;
+
 	private void drawKnotSegment(final int from, final int to, final float[] matrix)
 	{
 		final float DEG_TO_RAD = (float) (Math.PI / 180.);
@@ -81,7 +100,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		final float stopWorldX = handlePropX[to];
 		final float startWorldY = handlePropY[from];
 		final float stopWorldY = handlePropY[to];
-		final float sqrt8 = FloatMath.sqrt(2) * 2;
+		/*final float sqrt8 = FloatMath.sqrt(2) * 2;
 		final float adjustStartX;
 		final float adjustStopX;
 		final float adjustStartY;
@@ -96,7 +115,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			adjustStopX = 0.f;
 			adjustStartY = 0.f;
 			adjustStopY = 0.f;
-		}
+		}*/
 		if ((to - from == 2 || from == 0 && to == 6) && (to & 1) == 0) {
 			final float radius = FloatMath.sqrt(2) / 2;
 			final float cx, cy;
@@ -126,7 +145,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 				default:
 					throw new AssertionError();
 			}
-			final RectF oval = new RectF(cx - radius, cy - radius, cx + radius, cy + radius);
 			final float sweepAngle = (float) (Math.PI / 2);
 			this.objects.add(new Arc(cx, cy, startAngle, startAngle + sweepAngle, radius, width, matrix));
 		} else if (from == 0 && to == 3 || from == 2 && to == 7 || from == 3 && to == 6 || from == 4 && to == 7) {
@@ -179,14 +197,14 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			this.objects.add(new LineSegment(
 					startX,
 					startY,
-					cx + FloatMath.cos(startAngle),
-					cy + FloatMath.sin(startAngle),
+					cx + FloatMath.cos(startAngle) * radius,
+					cy + FloatMath.sin(startAngle) * radius,
 					width, matrix));
 			final float endAngle = startAngle + sweepAngle;
 			this.objects.add(new Arc(cx, cy, startAngle, endAngle, radius, width, matrix));
 			this.objects.add(new LineSegment(
-					cx + FloatMath.cos(endAngle),
-					cy + FloatMath.sin(endAngle),
+					cx + FloatMath.cos(endAngle) * radius,
+					cy + FloatMath.sin(endAngle) * radius,
 					stopX,
 					stopY,
 					width,
@@ -197,6 +215,19 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			this.objects.add(new LineSegment(startWorldX, startWorldY, stopWorldX, stopWorldY, width, matrix));
 		} else {
 		}
+	}
+
+	public void scroll(final float px, final float py)
+	{
+		this.cx += px / this.width * this.rw * 2;
+		this.cy -= py / this.height * this.rh * 2;
+	}
+
+	public void zoom(final float focusX, final float focusY, final float scaleFactor)
+	{
+		this.w /= scaleFactor;
+		this.h /= scaleFactor;
+		calcProj();
 	}
 
 	@Override
@@ -210,6 +241,36 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 	}
 
 	@Override
+	public void onSurfaceChanged(final GL10 unused, final int width, final int height)
+	{
+		// Adjust the viewport based on geometry changes,
+		// such as screen rotation
+		GLES20.glViewport(0, 0, width, height);
+		this.width = width;
+		this.height = height;
+
+		calcProj();
+
+	}
+
+	private void calcProj()
+	{
+		final float ratio = (float) this.width / this.height;
+		if (ratio < 1) {
+			this.rw = this.w;
+			this.rh = this.h / ratio;
+		} else {
+			this.rw = this.w * ratio;
+			this.rh = this.h;
+		}
+
+		// this projection matrix is applied to object coordinates
+		// in the onDrawFrame() method
+		Matrix.frustumM(this.mProjMatrix, 0, -this.rw, this.rw, -this.rh, this.rh, 3, 7);
+		// Matrix.orthoM(this.mProjMatrix, 0, -f, f, -f, f, 3, 7);
+	}
+
+	@Override
 	public void onDrawFrame(final GL10 unused)
 	{
 		final long startNanos = System.nanoTime();
@@ -219,8 +280,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 		// Set the camera position (View matrix)
 		Matrix.setLookAtM(this.mVMatrix, 0,
-				0, 0, -3,
-				0f, 0f, 0f,
+				this.cx, this.cy, 4,
+				this.cx, this.cy, 0f,
 				0f, 1.0f, 0.0f);
 
 		// Calculate the projection and view transformation
@@ -234,21 +295,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 		final long frameNanos = System.nanoTime() - startNanos;
 		Log.i(TAG, "drawFrame took " + frameNanos / 1000. / 1000. + "ms");
-	}
-
-	@Override
-	public void onSurfaceChanged(final GL10 unused, final int width, final int height)
-	{
-		// Adjust the viewport based on geometry changes,
-		// such as screen rotation
-		GLES20.glViewport(0, 0, width, height);
-
-		final float ratio = (float) width / height;
-
-		// this projection matrix is applied to object coordinates
-		// in the onDrawFrame() method
-		Matrix.frustumM(this.mProjMatrix, 0, ratio, -ratio, -1, 1, 3, 7);
-
 	}
 
 	public static int loadShader(final int type, final String shaderCode)

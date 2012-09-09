@@ -25,6 +25,9 @@ public class DrawingView extends GLSurfaceView {
 		@Override
 		public boolean onScale(final ScaleGestureDetector detector)
 		{
+			DrawingView.this.renderer.zoom(detector.getFocusX(), detector.getFocusY(), detector.getScaleFactor());
+			requestRender();
+			/*
 			final float worldFocusX = screenToWorldX(detector.getFocusX());
 			final float worldFocusY = screenToWorldY(detector.getFocusY());
 			DrawingView.this.worldToScreen *= detector.getScaleFactor();
@@ -32,6 +35,7 @@ public class DrawingView extends GLSurfaceView {
 			DrawingView.this.yScroll -= screenToWorldY(detector.getFocusY()) - worldFocusY;
 			setUpPaints();
 			invalidate();
+			*/
 			return true;
 		}
 
@@ -60,11 +64,8 @@ public class DrawingView extends GLSurfaceView {
 		@Override
 		public boolean onScroll(final MotionEvent e1, final MotionEvent e2, final float distanceX, final float distanceY)
 		{
-			final float worldDX = distanceX / DrawingView.this.worldToScreen;
-			final float worldDY = distanceY / DrawingView.this.worldToScreen;
-			DrawingView.this.xScroll += worldDX;
-			DrawingView.this.yScroll += worldDY;
-			invalidate();
+			DrawingView.this.renderer.scroll(distanceX, distanceY);
+			requestRender();
 			return true;
 		}
 
@@ -100,7 +101,7 @@ public class DrawingView extends GLSurfaceView {
 	private float xScroll;
 	private float yScroll;
 
-	private float worldToScreen = 10;
+	private final float worldToScreen = 10;
 
 	private DrawingModel model;
 
@@ -298,6 +299,8 @@ public class DrawingView extends GLSurfaceView {
 		if (this.mStartHandle == null) {
 			this.gestureDetector.onTouchEvent(event);
 		}
+		return true;
+		/*
 		switch (event.getAction()) {
 			case MotionEvent.ACTION_DOWN: {
 				final float worldX = screenToWorldX(event.getX());
@@ -350,6 +353,7 @@ public class DrawingView extends GLSurfaceView {
 				break;
 		}
 		return true;
+		*/
 	}
 
 	private int clamp(final int min, final int max, final int i)
