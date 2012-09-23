@@ -6,7 +6,6 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
-import android.util.Log;
 
 class LineSegment implements GLDrawable {
 
@@ -27,22 +26,30 @@ class LineSegment implements GLDrawable {
 	private final float outsideColor[] = { 0.f, 0.f, 0.f, 1.0f };
 	private final float insideColor[] = { 1.f, 0.f, 0.f, 1.0f };
 
-	LineSegment(final float x1, final float y1, final float x2, final float y2, final float width, final float[] matrix)
+	LineSegment(
+			final float x1,
+			final float y1,
+			final float x2,
+			final float y2,
+			final float width,
+			final ZCalculator zcalc,
+			final float[] matrix)
 	{
-		Log.d(LOG_TAG, String.format("(%.4f,%.4f)->(%.4f,%.4f) [%.4f]", x1, y1, x2, y2, width));
 		final double a = Math.atan2(y2 - y1, x2 - x1);
 		final float dx1 = (float) (width / 2 * Math.cos(a + Math.PI / 2));
 		final float dy1 = (float) (width / 2 * Math.sin(a + Math.PI / 2));
 		final float xm = (x1 + x2) / 2.f;
 		final float ym = (y1 + y2) / 2.f;
-		Log.d(LOG_TAG, String.format("a=%.4f dx=%.4f dy=%.4f", a, dx1, dy1));
+		final float zStart = zcalc.z(0.f);
+		final float zMiddle = zcalc.z(.5f);
+		final float zEnd = zcalc.z(1.f);
 		this.coords = new float[] {
-				x2 + dx1, y2 + dy1, 0.f, // 3
-				x2 - dx1, y2 - dy1, 0.f, // 4
-				xm + dx1, ym + dy1, -width, // 2
-				xm - dx1, ym - dy1, -width, // 5
-				x1 + dx1, y1 + dy1, 0.f, // 1
-				x1 - dx1, y1 - dy1, 0.f, // 0
+				x2 + dx1, y2 + dy1, zStart, // 3
+				x2 - dx1, y2 - dy1, zStart, // 4
+				xm + dx1, ym + dy1, zMiddle, // 2
+				xm - dx1, ym - dy1, zMiddle, // 5
+				x1 + dx1, y1 + dy1, zEnd, // 1
+				x1 - dx1, y1 - dy1, zEnd, // 0
 		};
 		final float[] texcoords = {
 				0.f, 0.f,
@@ -79,36 +86,38 @@ class LineSegment implements GLDrawable {
 	}
 
 	@Override
-	public void draw(final ArcShaders shaders, final float[] mvpMatrix)
+	public void draw(final Shaders shaders, final float[] mvpMatrix)
 	{
+		final KnotShaders knotShaders = shaders.knotShaders;
+
 		// Add program to OpenGL environment
-		GLES20.glUseProgram(shaders.program);
+		GLES20.glUseProgram(knotShaders.program);
 
 		// Enable a handle to the triangle vertices
-		GLES20.glEnableVertexAttribArray(shaders.positionHandle);
-		GLES20.glEnableVertexAttribArray(shaders.texCoordHandle);
+		GLES20.glEnableVertexAttribArray(knotShaders.positionHandle);
+		GLES20.glEnableVertexAttribArray(knotShaders.texCoordHandle);
 
 		// Prepare the triangle coordinate data
-		GLES20.glVertexAttribPointer(shaders.positionHandle, COORDS_PER_VERTEX,
+		GLES20.glVertexAttribPointer(knotShaders.positionHandle, COORDS_PER_VERTEX,
 				GLES20.GL_FLOAT, false,
 				vertexStride, this.vertexBuffer);
 
 		// Prepare the texture data
-		GLES20.glVertexAttribPointer(shaders.texCoordHandle, 2, GLES20.GL_FLOAT, false, 2 * 4, this.texCoordBuffer);
+		GLES20.glVertexAttribPointer(knotShaders.texCoordHandle, 2, GLES20.GL_FLOAT, false, 2 * 4, this.texCoordBuffer);
 
 		// Set color for drawing the triangle
-		GLES20.glUniform4fv(shaders.outsideColorHandle, 1, this.outsideColor, 0);
-		GLES20.glUniform4fv(shaders.insideColorHandle, 1, this.insideColor, 0);
+		GLES20.glUniform4fv(knotShaders.outsideColorHandle, 1, this.outsideColor, 0);
+		GLES20.glUniform4fv(knotShaders.insideColorHandle, 1, this.insideColor, 0);
 
 		// Apply the projection and view transformation
-		GLES20.glUniformMatrix4fv(shaders.MVPMatrixHandle, 1, false, mvpMatrix, 0);
+		GLES20.glUniformMatrix4fv(knotShaders.MVPMatrixHandle, 1, false, mvpMatrix, 0);
 		MyGLRenderer.checkGlError("glUniformMatrix4fv");
 
 		// Draw the square
 		GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, this.coords.length / COORDS_PER_VERTEX);
 
 		// Disable vertex array
-		GLES20.glDisableVertexAttribArray(shaders.positionHandle);
-		GLES20.glDisableVertexAttribArray(shaders.texCoordHandle);
+		GLES20.glDisableVertexAttribArray(knotShaders.positionHandle);
+		GLES20.glDisableVertexAttribArray(knotShaders.texCoordHandle);
 	}
 }

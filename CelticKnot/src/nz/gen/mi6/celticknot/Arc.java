@@ -28,7 +28,9 @@ class Arc implements GLDrawable {
 			final float startAngle,
 			final float endAngle,
 			final float radius,
-			final float width, final float[] matrix)
+			final float width,
+			final ZCalculator zcalc,
+			final float[] matrix)
 	{
 		final int numEdges = 50;
 		final float deltaAngle = (endAngle - startAngle) / numEdges;
@@ -47,7 +49,7 @@ class Arc implements GLDrawable {
 			final float y1 = cy + r1 * sin;
 			final float x2 = cx + r2 * cos;
 			final float y2 = cy + r2 * sin;
-			final float z = -FloatMath.sin((angle - startAngle) / (endAngle - startAngle) * (float) Math.PI) * width;
+			final float z = zcalc.z((angle - startAngle) / (endAngle - startAngle));
 			vec[0] = x1;
 			vec[1] = y1;
 			vec[2] = z;
@@ -93,8 +95,10 @@ class Arc implements GLDrawable {
 	 * @see nz.gen.mi6.celticknot.GLDrawable#draw(float[])
 	 */
 	@Override
-	public void draw(final ArcShaders arcShaders, final float[] mvpMatrix)
+	public void draw(final Shaders shaders, final float[] mvpMatrix)
 	{
+		final KnotShaders arcShaders = shaders.knotShaders;
+
 		// Add program to OpenGL environment
 		GLES20.glUseProgram(arcShaders.program);
 

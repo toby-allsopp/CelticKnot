@@ -2,39 +2,28 @@ package nz.gen.mi6.celticknot;
 
 import android.opengl.GLES20;
 
-class ArcShaders {
+class GridShaders {
 
 	private final String vertexShaderCode = ""
 			+ "attribute vec4 position;"
 			+ "attribute vec2 texcoord;"
 			+ "uniform mat4 uMVPMatrix;"
-			+ "varying vec2 vTexCoord;"
 			+ "void main() {"
 			+ "  gl_Position = uMVPMatrix * position;"
-			+ "  vTexCoord = texcoord;"
 			+ "}";
 	private final String fragmentShaderCode = ""
 			+ "precision mediump float;"
-			+ "uniform vec4 uOutsideColor;"
-			+ "uniform vec4 uInsideColor;"
-			+ "varying vec2 vTexCoord;"
+			+ "uniform vec4 uColor;"
 			+ "void main() {"
-			// + "  gl_FragColor = uColor;"
-			+ "  if (vTexCoord.s < 0.1 || vTexCoord.s > 0.9) {"
-			+ "    gl_FragColor = uOutsideColor;"
-			+ "  } else {"
-			+ "    gl_FragColor = uInsideColor;"
-			+ "  }"
+			+ "  gl_FragColor = uColor;"
 			+ "}";
 
 	int positionHandle;
-	int outsideColorHandle;
-	int insideColorHandle;
+	int colorHandle;
 	final int program;
 	int MVPMatrixHandle;
-	int texCoordHandle;
 
-	ArcShaders()
+	GridShaders()
 	{
 		final int vertexShader = MyGLRenderer.loadShader(GLES20.GL_VERTEX_SHADER, this.vertexShaderCode);
 		final int fragmentShader = MyGLRenderer.loadShader(GLES20.GL_FRAGMENT_SHADER, this.fragmentShaderCode);
@@ -49,11 +38,7 @@ class ArcShaders {
 
 		this.positionHandle = GLES20.glGetAttribLocation(this.program, "position");
 		MyGLRenderer.checkGlError("glGetAttribLocation");
-		this.texCoordHandle = GLES20.glGetAttribLocation(this.program, "texcoord");
-		MyGLRenderer.checkGlError("glGetAttribLocation");
-		this.outsideColorHandle = GLES20.glGetUniformLocation(this.program, "uOutsideColor");
-		MyGLRenderer.checkGlError("glGetUniformLocation");
-		this.insideColorHandle = GLES20.glGetUniformLocation(this.program, "uInsideColor");
+		this.colorHandle = GLES20.glGetUniformLocation(this.program, "uColor");
 		MyGLRenderer.checkGlError("glGetUniformLocation");
 		this.MVPMatrixHandle = GLES20.glGetUniformLocation(this.program, "uMVPMatrix");
 		MyGLRenderer.checkGlError("glGetUniformLocation");

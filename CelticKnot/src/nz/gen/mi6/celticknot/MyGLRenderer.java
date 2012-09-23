@@ -38,9 +38,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 	private float cx;
 	private float cy;
 
-	private final ArrayList<GLDrawable> objects = new ArrayList<GLDrawable>();
+	private ArrayList<GLDrawable> objects = new ArrayList<GLDrawable>();
 
-	private ArcShaders arcShaders;
+	private final Shaders shaders = new Shaders();
 
 	private int width;
 
@@ -48,40 +48,50 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 	public void setModel(final DrawingModel model)
 	{
-		synchronized (this.objects) {
-			this.objects.clear();
-			/*this.objects.add(new Arc(0.f, 0.f, 0.f, (float) Math.PI, .5f, .1f));
-			this.objects.add(new LineSegment(-.4f, .1f, .4f, -.1f, .1f));*/
-			// this.objects.add(new LineSegment(0, 0, 1, 1, .1f, null));
-			// this.objects.add(new LineSegment(0, 1, 1, 0, .1f, null));
-			final float[] matrix = new float[16];
+		final ArrayList<GLDrawable> objects = new ArrayList<GLDrawable>();
 
-			for (int column = 0; column < model.getNumColumns() + 2; ++column) {
-				for (int row = 0; row < model.getNumRows() + 2; ++row) {
-					final boolean skip = false; /*column != 1 || row != 0;*/
-					if (skip) {
-						continue;
-					}
-					final Cell cell = model.getCell(column, row);
-					Matrix.setIdentityM(matrix, 0);
-					Matrix.translateM(matrix, 0, column, row, 0);
-					final int[] spinwise = { 4, 5, 6, 7, 0, 1, 2, 3 };
-					for (int i = 0; i < 8; ++i) {
-						final int from = spinwise[i];
-						final int to = cell.getConnectionFrom(from);
-						if (to != -1) {
-							drawKnotSegment(from, to, matrix);
-						}
+		drawGrid(objects, model);
+		drawKnot(objects, model);
+
+		synchronized (this) {
+			this.objects = objects;
+		}
+	}
+
+	private void drawGrid(final ArrayList<GLDrawable> objects, final DrawingModel model)
+	{
+		objects.add(new Grid(0.f, 0.f, 1.f, 1.f, model.getNumColumns() + 3, model.getNumRows() + 3));
+	}
+
+	private void drawKnot(final ArrayList<GLDrawable> objects, final DrawingModel model)
+	{
+		final float[] matrix = new float[16];
+
+		for (int column = 0; column < model.getNumColumns() + 2; ++column) {
+			for (int row = 0; row < model.getNumRows() + 2; ++row) {
+				final boolean skip = false; /*column != 1 || row != 0;*/
+				if (skip) {
+					continue;
+				}
+				final Cell cell = model.getCell(column, row);
+				Matrix.setIdentityM(matrix, 0);
+				Matrix.translateM(matrix, 0, column, row, 0);
+				for (int i = 0; i < 8; ++i) {
+					final int from = i;
+					final int to = cell.getConnectionFrom(from);
+					if (to != -1) {
+						drawKnotSegment(objects, from, to, matrix);
 					}
 				}
 			}
-
 		}
 	}
 
 	private static final float[] handlePropX = { 0.f, .5f, 1.f, 1.f, 1.f, .5f, 0.f, 0.f };
 
 	private static final float[] handlePropY = { 0.f, 0.f, 0.f, .5f, 1.f, 1.f, 1.f, .5f };
+
+	private static final float[] handlePropZ = { 0.f, 0.f, -1.f, -1.f, 0.f, 0.f, -1.f, -1.f };
 
 	private float w = 5.f;
 
@@ -91,7 +101,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 	private float rw;
 
-	private void drawKnotSegment(final int from, final int to, final float[] matrix)
+	private void drawKnotSegment(final ArrayList<GLDrawable> objects, final int from, final int to, final float[] matrix)
 	{
 		final float DEG_TO_RAD = (float) (Math.PI / 180.);
 		final float width = 0.1f;
@@ -100,6 +110,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		final float stopWorldX = handlePropX[to];
 		final float startWorldY = handlePropY[from];
 		final float stopWorldY = handlePropY[to];
+		final float startWorldZ = handlePropZ[from] * width * 2;
+		final float stopWorldZ = handlePropZ[to] * width * 2;
+		final float zMiddle = -width * 2 - startWorldZ;
 		/*final float sqrt8 = FloatMath.sqrt(2) * 2;
 		final float adjustStartX;
 		final float adjustStopX;
@@ -120,33 +133,58 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			final float radius = FloatMath.sqrt(2) / 2;
 			final float cx, cy;
 			final float startAngle;
+			final float startZ, stopZ;
 			switch (from) {
 				case 0:
 					if (to == 2) {
 						cx = .5f;
 						cy = -.5f;
 						startAngle = 45.f * DEG_TO_RAD;
+						startZ = stopWorldZ;
+						stopZ = startWorldZ;
 					} else {
 						cx = -.5f;
 						cy = .5f;
 						startAngle = 315.f * DEG_TO_RAD;
+						startZ = startWorldZ;
+						stopZ = stopWorldZ;
 					}
 					break;
 				case 2:
 					cx = 1.5f;
 					cy = .5f;
 					startAngle = 135.f * DEG_TO_RAD;
+					startZ = stopWorldZ;
+					stopZ = startWorldZ;
 					break;
 				case 4:
 					cx = .5f;
 					cy = 1.5f;
 					startAngle = 225.f * DEG_TO_RAD;
+					startZ = stopWorldZ;
+					stopZ = startWorldZ;
 					break;
 				default:
 					throw new AssertionError();
 			}
 			final float sweepAngle = (float) (Math.PI / 2);
-			this.objects.add(new Arc(cx, cy, startAngle, startAngle + sweepAngle, radius, width, matrix));
+			objects.add(new Arc(
+					cx,
+					cy,
+					startAngle,
+					startAngle + sweepAngle,
+					radius,
+					width,
+					new ZCalculator() {
+						@Override
+						public float z(final float p)
+						{
+							return startZ
+									+ FloatMath.sin(p * (float) Math.PI / 2.f)
+									* (stopZ - startZ);
+						}
+					},
+					matrix));
 		} else if (from == 0 && to == 3 || from == 2 && to == 7 || from == 3 && to == 6 || from == 4 && to == 7) {
 			final float startX, startY;
 			final float stopX, stopY;
@@ -194,25 +232,61 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 				default:
 					throw new AssertionError();
 			}
-			this.objects.add(new LineSegment(
+			objects.add(new LineSegment(
 					startX,
 					startY,
 					cx + FloatMath.cos(startAngle) * radius,
 					cy + FloatMath.sin(startAngle) * radius,
-					width, matrix));
+					width,
+					new ZCalculator() {
+						@Override
+						public float z(final float p)
+						{
+							return startWorldZ + (zMiddle - startWorldZ) * p;
+						}
+					},
+					matrix));
 			final float endAngle = startAngle + sweepAngle;
-			this.objects.add(new Arc(cx, cy, startAngle, endAngle, radius, width, matrix));
-			this.objects.add(new LineSegment(
+			objects.add(new Arc(cx, cy, startAngle, endAngle, radius, width, new ZCalculator() {
+				@Override
+				public float z(final float p)
+				{
+					return startWorldZ
+							+ FloatMath.sin(p * (float) Math.PI / 2.f)
+							* (stopWorldZ - startWorldZ);
+				}
+			},
+					matrix));
+			objects.add(new LineSegment(
 					cx + FloatMath.cos(endAngle) * radius,
 					cy + FloatMath.sin(endAngle) * radius,
 					stopX,
 					stopY,
 					width,
+					new ZCalculator() {
+						@Override
+						public float z(final float p)
+						{
+							return startWorldZ + (zMiddle - startWorldZ) * p;
+						}
+					},
 					matrix));
 		} else if ((from & 1) == 0 && to == from + 4) {
 			/*path.moveTo(startWorldX + adjustStartX, startWorldY + adjustStartY);
 			path.lineTo(stopWorldX + adjustStopX, stopWorldY + adjustStopY);*/
-			this.objects.add(new LineSegment(startWorldX, startWorldY, stopWorldX, stopWorldY, width, matrix));
+			objects.add(new LineSegment(startWorldX, startWorldY, stopWorldX, stopWorldY, width,
+					new ZCalculator() {
+						@Override
+						public float z(final float p)
+						{
+							if (p < .5f) {
+								return startWorldZ + (zMiddle - startWorldZ) * p * 2;
+							} else {
+								return zMiddle + (stopWorldZ - zMiddle) * (p - .5f) * 2;
+							}
+						}
+					},
+					matrix));
 		} else {
 		}
 	}
@@ -237,7 +311,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		// Set the background frame color
 		GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-		this.arcShaders = new ArcShaders();
+		// Enable depth testing
+		GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+		GLES20.glDepthFunc(GLES20.GL_LESS);
+
+		this.shaders.knotShaders = new KnotShaders();
+		this.shaders.gridShaders = new GridShaders();
 	}
 
 	@Override
@@ -280,21 +359,21 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 		// Set the camera position (View matrix)
 		Matrix.setLookAtM(this.mVMatrix, 0,
-				this.cx, this.cy, 4,
+				this.cx - 1, this.cy - 1, 4,
 				this.cx, this.cy, 0f,
 				0f, 1.0f, 0.0f);
 
 		// Calculate the projection and view transformation
 		Matrix.multiplyMM(this.mMVPMatrix, 0, this.mProjMatrix, 0, this.mVMatrix, 0);
 
-		synchronized (this.objects) {
+		synchronized (this) {
 			for (final GLDrawable object : this.objects) {
-				object.draw(this.arcShaders, this.mMVPMatrix);
+				object.draw(this.shaders, this.mMVPMatrix);
 			}
 		}
 
 		final long frameNanos = System.nanoTime() - startNanos;
-		Log.i(TAG, "drawFrame took " + frameNanos / 1000. / 1000. + "ms");
+		Log.i(TAG, String.format("drawFrame took %6.2fms", frameNanos / 1000. / 1000.));
 	}
 
 	public static int loadShader(final int type, final String shaderCode)
