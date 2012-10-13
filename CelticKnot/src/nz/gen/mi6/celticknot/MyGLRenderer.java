@@ -29,6 +29,40 @@ import android.util.Log;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
 
+	private static final class RampZCalculator implements ZCalculator {
+		private final float startZ;
+		private final float stopZ;
+
+		private RampZCalculator(final float startZ, final float stopZ)
+		{
+			this.startZ = startZ;
+			this.stopZ = stopZ;
+		}
+
+		@Override
+		public float z(final float p)
+		{
+			return this.startZ + FloatMath.sin(p * (float) Math.PI / 2.f) * (this.stopZ - this.startZ);
+		}
+	}
+
+	private static final class HumpZCalculator implements ZCalculator {
+		private final float startZ;
+		private final float middleZ;
+
+		private HumpZCalculator(final float startZ, final float middleZ)
+		{
+			this.startZ = startZ;
+			this.middleZ = middleZ;
+		}
+
+		@Override
+		public float z(final float p)
+		{
+			return this.startZ + FloatMath.sin(p * (float) Math.PI) * (this.middleZ - this.startZ);
+		}
+	}
+
 	private static final String TAG = "MyGLRenderer";
 
 	private final float[] mMVPMatrix = new float[16];
@@ -168,23 +202,16 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 					throw new AssertionError();
 			}
 			final float sweepAngle = (float) (Math.PI / 2);
-			objects.add(new Arc(
-					cx,
-					cy,
-					startAngle,
-					startAngle + sweepAngle,
-					radius,
-					width,
-					new ZCalculator() {
-						@Override
-						public float z(final float p)
-						{
-							return startZ
-									+ FloatMath.sin(p * (float) Math.PI / 2.f)
-									* (stopZ - startZ);
-						}
-					},
-					matrix));
+			objects.add(new Strip(
+					matrix,
+					new ArcStripCalculator(
+							cx,
+							cy,
+							radius,
+							startAngle,
+							startAngle + sweepAngle,
+							width,
+							new RampZCalculator(startZ, stopZ))));
 		} else if (from == 0 && to == 3 || from == 2 && to == 7 || from == 3 && to == 6 || from == 4 && to == 7) {
 			final float startX, startY;
 			final float stopX, stopY;
@@ -232,61 +259,44 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 				default:
 					throw new AssertionError();
 			}
-			objects.add(new LineSegment(
-					startX,
-					startY,
-					cx + FloatMath.cos(startAngle) * radius,
-					cy + FloatMath.sin(startAngle) * radius,
-					width,
-					new ZCalculator() {
-						@Override
-						public float z(final float p)
-						{
-							return startWorldZ + (zMiddle - startWorldZ) * p;
-						}
-					},
-					matrix));
+			objects.add(new Strip(matrix,
+					new LineSegmentStripCalculator(
+							startX,
+							startY,
+							cx + FloatMath.cos(startAngle) * radius,
+							cy + FloatMath.sin(startAngle) * radius,
+							width,
+							new RampZCalculator(startWorldZ, zMiddle))));
 			final float endAngle = startAngle + sweepAngle;
-			objects.add(new Arc(cx, cy, startAngle, endAngle, radius, width, new ZCalculator() {
-				@Override
-				public float z(final float p)
-				{
-					return startWorldZ
-							+ FloatMath.sin(p * (float) Math.PI / 2.f)
-							* (stopWorldZ - startWorldZ);
-				}
-			},
-					matrix));
-			objects.add(new LineSegment(
-					cx + FloatMath.cos(endAngle) * radius,
-					cy + FloatMath.sin(endAngle) * radius,
-					stopX,
-					stopY,
-					width,
-					new ZCalculator() {
-						@Override
-						public float z(final float p)
-						{
-							return startWorldZ + (zMiddle - startWorldZ) * p;
-						}
-					},
-					matrix));
+			objects.add(new Strip(
+					matrix,
+					new ArcStripCalculator(
+							cx,
+							cy,
+							radius,
+							startAngle,
+							endAngle,
+							width,
+							new RampZCalculator(startWorldZ, stopWorldZ))));
+			objects.add(new Strip(matrix,
+					new LineSegmentStripCalculator(
+							cx + FloatMath.cos(endAngle) * radius,
+							cy + FloatMath.sin(endAngle) * radius,
+							stopX,
+							stopY,
+							width,
+							new RampZCalculator(startWorldZ, zMiddle))));
 		} else if ((from & 1) == 0 && to == from + 4) {
 			/*path.moveTo(startWorldX + adjustStartX, startWorldY + adjustStartY);
 			path.lineTo(stopWorldX + adjustStopX, stopWorldY + adjustStopY);*/
-			objects.add(new LineSegment(startWorldX, startWorldY, stopWorldX, stopWorldY, width,
-					new ZCalculator() {
-						@Override
-						public float z(final float p)
-						{
-							if (p < .5f) {
-								return startWorldZ + (zMiddle - startWorldZ) * p * 2;
-							} else {
-								return zMiddle + (stopWorldZ - zMiddle) * (p - .5f) * 2;
-							}
-						}
-					},
-					matrix));
+			objects.add(new Strip(matrix,
+					new LineSegmentStripCalculator(
+							startWorldX,
+							startWorldY,
+							stopWorldX,
+							stopWorldY,
+							width,
+							new HumpZCalculator(startWorldZ, zMiddle))));
 		} else {
 		}
 	}

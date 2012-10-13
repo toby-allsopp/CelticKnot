@@ -6,9 +6,8 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
-import android.util.FloatMath;
 
-class Arc implements GLDrawable {
+class Strip implements GLDrawable {
 
 	private final FloatBuffer vertexBuffer;
 
@@ -22,53 +21,33 @@ class Arc implements GLDrawable {
 	private final float outsideColor[] = { 0.f, 0.f, 0.f, 1.0f };
 	private final float insideColor[] = { 1.f, 0.f, 0.f, 1.0f };
 
-	Arc(
-			final float cx,
-			final float cy,
-			final float startAngle,
-			final float endAngle,
-			final float radius,
-			final float width,
-			final ZCalculator zcalc,
-			final float[] matrix)
+	Strip(
+			final float[] matrix,
+			final StripCalculator stripCalc)
 	{
 		final int numEdges = 50;
-		final float deltaAngle = (endAngle - startAngle) / numEdges;
-		final float r1 = radius - width / 2.f;
-		final float r2 = r1 + width;
 		final int numVertices = numEdges * 2 + 2;
 		this.coords = new float[numVertices * COORDS_PER_VERTEX];
 		final float[] texcoords = new float[numVertices * 2];
 		int v = 0;
-		final float[] vec = new float[8];
+		final float[] vec1 = new float[8];
+		final float[] vec2 = new float[8];
 		for (int e = 0; e <= numEdges; ++e) {
-			final float angle = startAngle + e * deltaAngle;
-			final float cos = FloatMath.cos(angle);
-			final float sin = FloatMath.sin(angle);
-			final float x1 = cx + r1 * cos;
-			final float y1 = cy + r1 * sin;
-			final float x2 = cx + r2 * cos;
-			final float y2 = cy + r2 * sin;
-			final float z = zcalc.z((angle - startAngle) / (endAngle - startAngle));
-			vec[0] = x1;
-			vec[1] = y1;
-			vec[2] = z;
-			vec[3] = 1;
-			Matrix.multiplyMV(vec, 4, matrix, 0, vec, 0);
-			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
-			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
-			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
+			final float p = (float) e / numEdges;
+			stripCalc.edges(p, vec1, vec2);
+			vec1[3] = 1;
+			Matrix.multiplyMV(vec1, 4, matrix, 0, vec1, 0);
+			this.coords[v * COORDS_PER_VERTEX + 0] = vec1[4];
+			this.coords[v * COORDS_PER_VERTEX + 1] = vec1[5];
+			this.coords[v * COORDS_PER_VERTEX + 2] = vec1[6];
 			texcoords[v * 2 + 0] = 0.f;
 			texcoords[v * 2 + 1] = 0.f;
 			++v;
-			vec[0] = x2;
-			vec[1] = y2;
-			vec[2] = z;
-			vec[3] = 1;
-			Matrix.multiplyMV(vec, 4, matrix, 0, vec, 0);
-			this.coords[v * COORDS_PER_VERTEX + 0] = vec[4];
-			this.coords[v * COORDS_PER_VERTEX + 1] = vec[5];
-			this.coords[v * COORDS_PER_VERTEX + 2] = vec[6];
+			vec2[3] = 1;
+			Matrix.multiplyMV(vec2, 4, matrix, 0, vec2, 0);
+			this.coords[v * COORDS_PER_VERTEX + 0] = vec2[4];
+			this.coords[v * COORDS_PER_VERTEX + 1] = vec2[5];
+			this.coords[v * COORDS_PER_VERTEX + 2] = vec2[6];
 			texcoords[v * 2 + 0] = 1.f;
 			texcoords[v * 2 + 1] = 0.f;
 			++v;
