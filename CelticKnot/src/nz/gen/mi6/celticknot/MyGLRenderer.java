@@ -147,22 +147,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		final float startWorldZ = handlePropZ[from] * width * 2;
 		final float stopWorldZ = handlePropZ[to] * width * 2;
 		final float zMiddle = -width * 2 - startWorldZ;
-		/*final float sqrt8 = FloatMath.sqrt(2) * 2;
-		final float adjustStartX;
-		final float adjustStopX;
-		final float adjustStartY;
-		final float adjustStopY;
-		if (from == 2) {
-			adjustStartX = -.3f / sqrt8;
-			adjustStopX = .3f / sqrt8;
-			adjustStartY = .3f / sqrt8;
-			adjustStopY = -.3f / sqrt8;
-		} else {
-			adjustStartX = 0.f;
-			adjustStopX = 0.f;
-			adjustStartY = 0.f;
-			adjustStopY = 0.f;
-		}*/
 		if ((to - from == 2 || from == 0 && to == 6) && (to & 1) == 0) {
 			final float radius = FloatMath.sqrt(2) / 2;
 			final float cx, cy;
@@ -287,8 +271,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 							width,
 							new RampZCalculator(startWorldZ, zMiddle))));
 		} else if ((from & 1) == 0 && to == from + 4) {
-			/*path.moveTo(startWorldX + adjustStartX, startWorldY + adjustStartY);
-			path.lineTo(stopWorldX + adjustStopX, stopWorldY + adjustStopY);*/
 			objects.add(new Strip(matrix,
 					new LineSegmentStripCalculator(
 							startWorldX,
