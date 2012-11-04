@@ -7,7 +7,7 @@ public class Cell {
 
 	public Cell()
 	{
-		Assert.assertTrue(invariant());
+		assertInvariant();
 	}
 
 	public void connect(final int from, final int to)
@@ -17,7 +17,7 @@ public class Cell {
 
 		this.connections[from] = to;
 		this.connections[to] = from;
-		Assert.assertTrue(invariant());
+		assertInvariant();
 	}
 
 	public void disconnect(final int node)
@@ -27,16 +27,20 @@ public class Cell {
 		if (to != -1) {
 			this.connections[to] = -1;
 		}
-		Assert.assertTrue(invariant());
+		assertInvariant();
 	}
 
-	public void moveConnection(final int from, final int to)
+	public void swap(final int from, final int newTo)
 	{
-		if (this.connections[from] != -1) {
-			this.connections[this.connections[from]] = to;
-			this.connections[to] = from;
+		final int oldTo = this.connections[from];
+		final int otherFrom = this.connections[newTo];
+		if (otherFrom != -1) {
+			this.connections[otherFrom] = oldTo;
 		}
-		Assert.assertTrue(invariant());
+		this.connections[oldTo] = otherFrom;
+		this.connections[from] = newTo;
+		this.connections[newTo] = from;
+		assertInvariant();
 	}
 
 	public int getConnectionFrom(final int from)
@@ -44,17 +48,12 @@ public class Cell {
 		return this.connections[from];
 	}
 
-	private boolean invariant()
+	private void assertInvariant()
 	{
-		if (this.connections.length != 8) {
-			return false;
-		}
+		Assert.assertEquals(8, this.connections.length);
 		for (int from = 0; from < 8; ++from) {
 			final int to = this.connections[from];
-			if (to != -1 && this.connections[to] != from) {
-				return false;
-			}
+			Assert.assertTrue(to == -1 || this.connections[to] == from);
 		}
-		return true;
 	}
 }
