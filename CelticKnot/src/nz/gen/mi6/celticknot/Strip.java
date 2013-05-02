@@ -22,8 +22,8 @@ class Strip implements GLDrawable {
 	private final float insideColor[] = { 1.f, 0.f, 0.f, 1.0f };
 
 	Strip(
-			final float[] matrix,
-			final StripCalculator stripCalc)
+		final float[] matrix,
+		final StripCalculator stripCalc)
 	{
 		final int numEdges = 50;
 		final int numVertices = numEdges * 2 + 2;
@@ -32,6 +32,10 @@ class Strip implements GLDrawable {
 		int v = 0;
 		final float[] vec1 = new float[8];
 		final float[] vec2 = new float[8];
+		float totalMass = 0.f;
+		float comX = 0.f;
+		float comY = 0.f;
+		float comZ = 0.f;
 		for (int e = 0; e <= numEdges; ++e) {
 			final float p = (float) e / numEdges;
 			stripCalc.edges(p, vec1, vec2);
@@ -51,6 +55,17 @@ class Strip implements GLDrawable {
 			texcoords[v * 2 + 0] = 1.f;
 			texcoords[v * 2 + 1] = 0.f;
 			++v;
+			if (e > 0) {
+				// TODO: use the triangles to calculate mass and centroid
+				final float edgeMass = 1.f;
+				final float edgeCOMx = (vec1[4] + vec2[4]) / 2.f;
+				final float edgeCOMy = (vec1[5] + vec2[5]) / 2.f;
+				final float edgeCOMz = (vec1[6] + vec2[6]) / 2.f;
+				comX = (comX * totalMass + edgeCOMx * edgeMass) / (totalMass + edgeMass);
+				comY = (comY * totalMass + edgeCOMy * edgeMass) / (totalMass + edgeMass);
+				comZ = (comZ * totalMass + edgeCOMz * edgeMass) / (totalMass + edgeMass);
+				totalMass += edgeMass;
+			}
 		}
 		{
 			final ByteBuffer bb = ByteBuffer.allocateDirect(this.coords.length * 4);
@@ -87,12 +102,12 @@ class Strip implements GLDrawable {
 
 		// Prepare the triangle coordinate data
 		GLES20.glVertexAttribPointer(
-				arcShaders.positionHandle,
-				COORDS_PER_VERTEX,
-				GLES20.GL_FLOAT,
-				false,
-				COORDS_PER_VERTEX * 4,
-				this.vertexBuffer);
+			arcShaders.positionHandle,
+			COORDS_PER_VERTEX,
+			GLES20.GL_FLOAT,
+			false,
+			COORDS_PER_VERTEX * 4,
+			this.vertexBuffer);
 
 		// Prepare the texture data
 		GLES20.glVertexAttribPointer(arcShaders.texCoordHandle, 2, GLES20.GL_FLOAT, false, 2 * 4, this.texCoordBuffer);
@@ -111,5 +126,12 @@ class Strip implements GLDrawable {
 		// Disable vertex array
 		GLES20.glDisableVertexAttribArray(arcShaders.positionHandle);
 		GLES20.glDisableVertexAttribArray(arcShaders.texCoordHandle);
+	}
+
+	@Override
+	public void getGravityAcceleration(final float x, final float y, final float z, final float[] out)
+	{
+		// TODO Auto-generated method stub
+
 	}
 }

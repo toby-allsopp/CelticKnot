@@ -24,7 +24,6 @@ import javax.microedition.khronos.opengles.GL10;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.util.FloatMath;
 import android.util.Log;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
@@ -42,7 +41,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		@Override
 		public float z(final float p)
 		{
-			return this.startZ + FloatMath.sin(p * (float) Math.PI / 2.f) * (this.stopZ - this.startZ);
+			return this.startZ + (float) Math.sin(p * Math.PI / 2.) * (this.stopZ - this.startZ);
 		}
 	}
 
@@ -59,7 +58,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		@Override
 		public float z(final float p)
 		{
-			return this.startZ + FloatMath.sin(p * (float) Math.PI) * (this.middleZ - this.startZ);
+			return this.startZ + (float) Math.sin(p * Math.PI) * (this.middleZ - this.startZ);
 		}
 	}
 
@@ -148,7 +147,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 		final float stopWorldZ = handlePropZ[to] * width * 2;
 		final float zMiddle = -width * 2 - startWorldZ;
 		if ((to - from == 2 || from == 0 && to == 6) && (to & 1) == 0) {
-			final float radius = FloatMath.sqrt(2) / 2;
+			final float radius = (float) (Math.sqrt(2) / 2);
 			final float cx, cy;
 			final float startAngle;
 			final float startZ, stopZ;
@@ -187,19 +186,19 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 			}
 			final float sweepAngle = (float) (Math.PI / 2);
 			objects.add(new Strip(
-					matrix,
-					new ArcStripCalculator(
-							cx,
-							cy,
-							radius,
-							startAngle,
-							startAngle + sweepAngle,
-							width,
-							new RampZCalculator(startZ, stopZ))));
+				matrix,
+				new ArcStripCalculator(
+					cx,
+					cy,
+					radius,
+					startAngle,
+					startAngle + sweepAngle,
+					width,
+					new RampZCalculator(startZ, stopZ))));
 		} else if (from == 0 && to == 3 || from == 2 && to == 7 || from == 3 && to == 6 || from == 4 && to == 7) {
 			final float startX, startY;
 			final float stopX, stopY;
-			final float radius = FloatMath.sqrt(2) / 2;
+			final float radius = (float) (Math.sqrt(2) / 2);
 			final float cx, cy;
 			final float startAngle;
 			final float sweepAngle = 45.f * DEG_TO_RAD;
@@ -244,41 +243,41 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 					throw new AssertionError();
 			}
 			objects.add(new Strip(matrix,
-					new LineSegmentStripCalculator(
-							startX,
-							startY,
-							cx + FloatMath.cos(startAngle) * radius,
-							cy + FloatMath.sin(startAngle) * radius,
-							width,
-							new RampZCalculator(startWorldZ, zMiddle))));
+				new LineSegmentStripCalculator(
+					startX,
+					startY,
+					cx + (float) Math.cos(startAngle) * radius,
+					cy + (float) Math.sin(startAngle) * radius,
+					width,
+					new RampZCalculator(startWorldZ, zMiddle))));
 			final float endAngle = startAngle + sweepAngle;
 			objects.add(new Strip(
-					matrix,
-					new ArcStripCalculator(
-							cx,
-							cy,
-							radius,
-							startAngle,
-							endAngle,
-							width,
-							new RampZCalculator(startWorldZ, stopWorldZ))));
+				matrix,
+				new ArcStripCalculator(
+					cx,
+					cy,
+					radius,
+					startAngle,
+					endAngle,
+					width,
+					new RampZCalculator(startWorldZ, stopWorldZ))));
 			objects.add(new Strip(matrix,
-					new LineSegmentStripCalculator(
-							cx + FloatMath.cos(endAngle) * radius,
-							cy + FloatMath.sin(endAngle) * radius,
-							stopX,
-							stopY,
-							width,
-							new RampZCalculator(startWorldZ, zMiddle))));
+				new LineSegmentStripCalculator(
+					cx + (float) Math.cos(endAngle) * radius,
+					cy + (float) Math.sin(endAngle) * radius,
+					stopX,
+					stopY,
+					width * 1.5f,
+					new RampZCalculator(zMiddle, stopWorldZ))));
 		} else if ((from & 1) == 0 && to == from + 4) {
 			objects.add(new Strip(matrix,
-					new LineSegmentStripCalculator(
-							startWorldX,
-							startWorldY,
-							stopWorldX,
-							stopWorldY,
-							width,
-							new HumpZCalculator(startWorldZ, zMiddle))));
+				new LineSegmentStripCalculator(
+					startWorldX,
+					startWorldY,
+					stopWorldX,
+					stopWorldY,
+					width,
+					new HumpZCalculator(startWorldZ, zMiddle))));
 		} else {
 		}
 	}
@@ -351,9 +350,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 		// Set the camera position (View matrix)
 		Matrix.setLookAtM(this.mVMatrix, 0,
-				this.cx - 1, this.cy - 1, 4,
-				this.cx, this.cy, 0f,
-				0f, 1.0f, 0.0f);
+			this.cx - 1, this.cy - 1, 4,
+			this.cx, this.cy, 0f,
+			0f, 1.0f, 0.0f);
 
 		// Calculate the projection and view transformation
 		Matrix.multiplyMM(this.mMVPMatrix, 0, this.mProjMatrix, 0, this.mVMatrix, 0);

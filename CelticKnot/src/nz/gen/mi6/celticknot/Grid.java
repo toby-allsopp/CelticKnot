@@ -18,12 +18,12 @@ class Grid implements GLDrawable {
 	private final float outsideColor[] = { 0.f, 0.f, 0.f, 1.0f };
 
 	Grid(
-			final float x,
-			final float y,
-			final float dx,
-			final float dy,
-			final int nx,
-			final int ny)
+		final float x,
+		final float y,
+		final float dx,
+		final float dy,
+		final int nx,
+		final int ny)
 	{
 		this.coords = new float[(nx * 2 + ny * 2) * COORDS_PER_VERTEX];
 		int v = 0;
@@ -74,12 +74,12 @@ class Grid implements GLDrawable {
 
 		// Prepare the triangle coordinate data
 		GLES20.glVertexAttribPointer(
-				gridShaders.positionHandle,
-				COORDS_PER_VERTEX,
-				GLES20.GL_FLOAT,
-				false,
-				COORDS_PER_VERTEX * 4,
-				this.vertexBuffer);
+			gridShaders.positionHandle,
+			COORDS_PER_VERTEX,
+			GLES20.GL_FLOAT,
+			false,
+			COORDS_PER_VERTEX * 4,
+			this.vertexBuffer);
 
 		// Set color for drawing the triangle
 		GLES20.glUniform4fv(gridShaders.colorHandle, 1, this.outsideColor, 0);
@@ -93,5 +93,12 @@ class Grid implements GLDrawable {
 
 		// Disable vertex array
 		GLES20.glDisableVertexAttribArray(gridShaders.positionHandle);
+	}
+
+	@Override
+	public void getGravityAcceleration(final float x, final float y, final float z, final float[] out)
+	{
+		// The grid is massless.
+		out[0] = out[1] = out[2] = 0;
 	}
 }

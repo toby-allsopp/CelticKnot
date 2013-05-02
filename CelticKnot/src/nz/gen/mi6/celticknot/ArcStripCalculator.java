@@ -1,6 +1,5 @@
 package nz.gen.mi6.celticknot;
 
-import android.util.FloatMath;
 
 final class ArcStripCalculator implements StripCalculator {
 	private final float cy;
@@ -12,13 +11,13 @@ final class ArcStripCalculator implements StripCalculator {
 	final float r2;
 
 	ArcStripCalculator(
-			final float cx,
-			final float cy,
-			final float radius,
-			final float startAngle,
-			final float endAngle,
-			final float width,
-			final ZCalculator zcalc)
+		final float cx,
+		final float cy,
+		final float radius,
+		final float startAngle,
+		final float endAngle,
+		final float width,
+		final ZCalculator zcalc)
 	{
 		this.cy = cy;
 		this.zcalc = zcalc;
@@ -33,8 +32,8 @@ final class ArcStripCalculator implements StripCalculator {
 	public void edges(final float p, final float[] e1, final float[] e2)
 	{
 		final float angle = this.startAngle + p * (this.endAngle - this.startAngle);
-		final float cos = FloatMath.cos(angle);
-		final float sin = FloatMath.sin(angle);
+		final float cos = (float) Math.cos(angle);
+		final float sin = (float) Math.sin(angle);
 		e1[0] = this.cx + this.r1 * cos;
 		e2[0] = this.cx + this.r2 * cos;
 		e1[1] = this.cy + this.r1 * sin;
